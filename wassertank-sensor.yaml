@@ -1,0 +1,157 @@
+substitutions:
+# HIER DEN LOG-MODUS SCHALTEN:
+  # "DEBUG" = Board bleibt unendlich wach, USB-Logging ist aktiv.
+  # "NONE"  = Komplett lautlos, minimale CPU-Last, sofortiger Deep Sleep (Solar-Modus).
+  DEBUG_MODE: "NONE"
+
+  # PIN-KONFIGURATION FÜR DEN SENSOR-STROM (Transistor/MOSFET)
+  # Sinnvolle, sichere GPIOs beim ESP32-C6 (DevKit):
+  # -> GPIO1, GPIO2, GPIO3, GPIO20, GPIO21, GPIO22 oder GPIO23.
+  # Vermeiden: GPIO8, GPIO9 (Strapping-Pins) & GPIO16/17 (belegt durch UART!).
+  # Falls kein Transistor genutzt wird, einfach so stehen lassen.
+  SENSOR_POWER_PIN: "GPIO21"
+  # Analoger Pin für die Batteriemessung (Sicher beim C6: GPIO0, GPIO1, GPIO2, GPIO3)
+  BATTERY_ADC_PIN: "GPIO0"  # A0 auf der FireBeetle 2 C6
+  # NETZWERK-EINSTELLUNGEN
+  WIFI_STATIC_IP: "192.168.178.46"
+  WIFI_GATEWAY: "192.168.178.1"
+  WIFI_SUBNET: "255.255.255.0"
+
+  # TANK-TYP: "ROUND" oder "RECTANGLE"
+  TANK_TYPE: "RECTANGLE"
+
+  # ALLGEMEINE TANK-PARAMETER (In Metern eintragen!)
+  # Abstand vom Sensor bis zum absoluten Tankboden (wenn der Tank komplett leer ist)
+  TANK_TOTAL_DEPTH: "1.65"
+  # Maximales Fassungsvermögen in Litern (als Sicherheitsbegrenzung)
+  TANK_MAX_LITERS: "650"
+
+  # MAẞE FÜR RUNDE TANKS (Nur wichtig, wenn TANK_TYPE: "ROUND")
+  # Radius des Tanks (Innendurchmesser geteilt durch 2)
+  TANK_RADIUS: "0.50"
+
+  # MAẞE FÜR ECKIGE TANKS (Nur wichtig, wenn TANK_TYPE: "RECTANGLE")
+  # Innenlänge des Tanks in Metern
+  TANK_LENGTH: "0.77"
+  # Innenbreite des Tanks in Metern
+  TANK_WIDTH: "0.57"
+
+esphome:
+  name: wassertank-sensor
+  friendly_name: Wassertank Sensor
+  area: Garten
+
+  on_boot:
+    priority: 800 # Sehr hohe Priorität: Wird ausgeführt, noch bevor der Logger startet
+    then:
+      - switch.turn_on: sensor_power
+      - delay: 30s
+      - deep_sleep.enter:
+          id: deep_sleep_control
+          sleep_duration: 30min
+
+esp32:
+  variant: esp32c6
+
+deep_sleep:
+  id: deep_sleep_control
+
+# Steuerung komplett nativ über die Substitution oben
+logger:
+  level: ${DEBUG_MODE}
+
+api:
+  encryption:
+    key: "/JUP/LtiX5b9KApacnaQkBWx2xUE8YO2gHw6hAH+e5o="
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  manual_ip:
+    static_ip: ${WIFI_STATIC_IP}
+    gateway: ${WIFI_GATEWAY}
+    subnet: ${WIFI_SUBNET}
+
+uart:
+  - id: uart_1
+    baud_rate: 9600
+    rx_pin: 17
+    tx_pin: 16
+
+# Dieser Schalter trennt im Tiefschlaf den Sensor vom Strom (über Transistor/MOSFET)
+switch:
+  - platform: gpio
+    pin: ${SENSOR_POWER_PIN}
+    id: sensor_power
+    restore_mode: ALWAYS_OFF
+    internal: true
+
+sensor:
+  # Akkuspannung speziell für FireBeetle 2 ESP32-C6 (DFR1075)
+  - platform: adc
+    pin: ${BATTERY_ADC_PIN}
+    name: "Wassertank Batterie Spannung"
+    id: battery_voltage
+    unit_of_measurement: "V"
+    icon: "mdi:battery"
+    accuracy_decimals: 2
+    attenuation: 0db  # Wichtig für die präzise interne 1.1V Referenz des C6
+    filters:
+      # Präzise Umrechnung des internen Spannungsteilers der FireBeetle
+      - calibrate_linear:
+          - 0.0 -> 0.0
+          - 1.1 -> 4.50 
+  # Holt die Schlafdauer aus Home Assistant
+  - platform: homeassistant
+    id: ha_sleep_duration
+    entity_id: input_number.wassertank_schlafdauer
+    internal: true
+
+  # Physischer Ultraschallsensor (liefert Meter)
+  - platform: a02yyuw
+    id: sensor_a02yyuw_1
+    uart_id: uart_1
+    on_value:
+      then:
+        - lambda: |-
+            float distance = x;
+            float max_depth = ${TANK_TOTAL_DEPTH};
+            float water_level = max_depth - distance;
+            if (water_level < 0.0) water_level = 0.0;
+            
+            float liters = 0.0;
+            std::string tank_type = "${TANK_TYPE}";
+
+            if (tank_type == "ROUND") {
+              float radius = ${TANK_RADIUS};
+              liters = 3.14159265 * radius * radius * water_level * 1000.0;
+            } 
+            else if (tank_type == "RECTANGLE") {
+              float length = ${TANK_LENGTH};
+              float width = ${TANK_WIDTH};
+              liters = length * width * water_level * 1000.0;
+            }
+
+            if (liters > ${TANK_MAX_LITERS}) liters = ${TANK_MAX_LITERS};
+            if (liters < 0.0) liters = 0.0;
+            
+            id(wassertank_liter).publish_state(liters);
+
+            // Wenn wir nicht im Debug-Modus sind, wird die Schlafdauer berechnet und der Deep Sleep eingeleitet
+            if (std::string("${DEBUG_MODE}") == "NONE") {
+              uint32_t sleep_ms = 30 * 60 * 1000;
+              if (id(ha_sleep_duration).has_state() && !std::isnan(id(ha_sleep_duration).state) && id(ha_sleep_duration).state > 0) {
+                sleep_ms = (uint32_t) (id(ha_sleep_duration).state * 60 * 1000);
+              }
+              id(deep_sleep_control).set_sleep_duration(sleep_ms);
+              id(deep_sleep_control).setup();
+            }
+
+  # Virtueller Sensor für Home Assistant
+  - platform: template
+    name: "Wassertank Inhalt"
+    id: wassertank_liter
+    unit_of_measurement: "l"
+    icon: "mdi:water"
+    accuracy_decimals: 1
