@@ -1,85 +1,245 @@
 substitutions:
-# HIER DEN LOG-MODUS SCHALTEN:
-  # "DEBUG" = Board bleibt unendlich wach, USB-Logging ist aktiv.
-  # "NONE"  = Komplett lautlos, minimale CPU-Last, sofortiger Deep Sleep (Solar-Modus).
+# ============================================================================
+# POWER MODE
+# ============================================================================
+# "DEBUG" = Board stays awake, USB logging active (for development)
+# "NONE"  = Deep sleep mode for solar operation (production)
   DEBUG_MODE: "NONE"
 
-  # PIN-KONFIGURATION FÜR DEN SENSOR-STROM (Transistor/MOSFET)
-  # Sinnvolle, sichere GPIOs beim ESP32-C6 (DevKit):
-  # -> GPIO1, GPIO2, GPIO3, GPIO20, GPIO21, GPIO22 oder GPIO23.
-  # Vermeiden: GPIO8, GPIO9 (Strapping-Pins) & GPIO16/17 (belegt durch UART!).
-  # Falls kein Transistor genutzt wird, einfach so stehen lassen.
+# ============================================================================
+# HARDWARE CONFIGURATION (FireBeetle 2 ESP32-C6)
+# ============================================================================
+# Sensor power control (Transistor/MOSFET)
+# Safe GPIOs: GPIO1, GPIO2, GPIO3, GPIO20, GPIO21, GPIO22, GPIO23
+# GPIO16/17 are reserved for UART!
   SENSOR_POWER_PIN: "GPIO21"
-  # Analoger Pin für die Batteriemessung (Sicher beim C6: GPIO0, GPIO1, GPIO2, GPIO3)
-  BATTERY_ADC_PIN: "GPIO0"  # A0 auf der FireBeetle 2 C6
-  # NETZWERK-EINSTELLUNGEN
+  
+# Battery voltage measurement (Analog)
+# FireBeetle 2 C6: GPIO0, GPIO1, GPIO2, GPIO3 with internal 1.1V reference
+  BATTERY_ADC_PIN: "GPIO0"
+  
+# Solar panel voltage (optional, if available)
+  SOLAR_ADC_PIN: "GPIO1"
+
+# ============================================================================
+# NETWORK CONFIGURATION
+# ============================================================================
   WIFI_STATIC_IP: "192.168.178.46"
   WIFI_GATEWAY: "192.168.178.1"
   WIFI_SUBNET: "255.255.255.0"
+  
+  # Fallback WiFi network (optional) - leave empty to disable
+  WIFI_SSID_FALLBACK: ""
+  WIFI_PASSWORD_FALLBACK: ""
 
-  # TANK-TYP: "ROUND" oder "RECTANGLE"
+# ============================================================================
+# TANK CONFIGURATION
+# ============================================================================
+# Tank type: "ROUND" or "RECTANGLE"
   TANK_TYPE: "RECTANGLE"
-
-  # ALLGEMEINE TANK-PARAMETER (In Metern eintragen!)
-  # Abstand vom Sensor bis zum absoluten Tankboden (wenn der Tank komplett leer ist)
+  
+# Distance from sensor to absolute tank bottom when empty (in meters)
   TANK_TOTAL_DEPTH: "1.65"
-  # Maximales Fassungsvermögen in Litern (als Sicherheitsbegrenzung)
+  
+# Maximum capacity in liters (safety limit)
   TANK_MAX_LITERS: "650"
-
-  # MAẞE FÜR RUNDE TANKS (Nur wichtig, wenn TANK_TYPE: "ROUND")
-  # Radius des Tanks (Innendurchmesser geteilt durch 2)
+  
+# For ROUND tanks: Radius in meters (inner diameter / 2)
   TANK_RADIUS: "0.50"
-
-  # MAẞE FÜR ECKIGE TANKS (Nur wichtig, wenn TANK_TYPE: "RECTANGLE")
-  # Innenlänge des Tanks in Metern
+  
+# For RECTANGLE tanks: Inner dimensions in meters
   TANK_LENGTH: "0.77"
-  # Innenbreite des Tanks in Metern
   TANK_WIDTH: "0.57"
 
+# ============================================================================
+# BATTERY CONFIGURATION
+# ============================================================================
+# Empty battery voltage (device shutdown threshold)
+  BATTERY_MIN_VOLTAGE: "3.0"
+# Full battery voltage (Li-Ion typical 4.2V)
+  BATTERY_MAX_VOLTAGE: "4.2"
+# Critical battery voltage for emergency sleep
+  BATTERY_CRITICAL_VOLTAGE: "3.2"
+
+# ============================================================================
+# SOLAR CONFIGURATION (optional)
+# ============================================================================
+# Solar panel voltage divider factor (if SOLAR_ADC_PIN is active)
+# Example: 10k+33k divider = 4.3 (1.1V ref: 4.5V max)
+  SOLAR_VOLTAGE_DIVIDER: "4.3"
+
+# ============================================================================
+# POWER OPTIMIZATION
+# ============================================================================
+# Warmup time for ultrasonic sensor (seconds) - 5s is sufficient for A02YYUW
+  ULTRASONIC_WARMUP_TIME: "5"
+  
+# Measurement processing time (seconds)
+  MEASUREMENT_PROCESSING_TIME: "2"
+
+# Default sleep duration (minutes) - can be overridden by HA
+  DEFAULT_SLEEP_MINUTES: "30"
+
+# OTA Wake Window (seconds) - Time window for OTA updates after waking
+  OTA_WAKE_WINDOW: "300"
+
+# CPU frequency for power saving (80MHZ or 160MHZ)
+  CPU_FREQUENCY: "80MHZ"
+
+# ============================================================================
+# ESPHOME CONFIGURATION
+# ============================================================================
 esphome:
   name: wassertank-sensor
   friendly_name: Wassertank Sensor
   area: Garten
+  min_version: 2026.8.0
 
   on_boot:
-    priority: 800 # Sehr hohe Priorität: Wird ausgeführt, noch bevor der Logger startet
+    priority: 800  # Very high priority: executed before logger starts
     then:
+      # 1. Turn on sensor power
       - switch.turn_on: sensor_power
-      - delay: 30s
-      - deep_sleep.enter:
-          id: deep_sleep_control
-          sleep_duration: 30min
+      
+      # 2. Wait for sensor stabilization (A02YYUW warmup)
+      - delay: ${ULTRASONIC_WARMUP_TIME}s
+      
+      # 3. Wait for data processing and transmission
+      - delay: ${MEASUREMENT_PROCESSING_TIME}s
+      
+      # 4. Check for low battery condition and enter emergency mode if critical
+      - if:
+          condition:
+            and:
+              - lambda: 'return id(battery_voltage).has_state();'
+              - lambda: 'return id(battery_voltage).state < ${BATTERY_CRITICAL_VOLTAGE};'
+          then:
+            - logger.log: "CRITICAL: Low battery detected - entering emergency sleep mode"
+            - switch.turn_off: sensor_power
+            - wifi.disable
+            - deep_sleep.enter:
+                id: deep_sleep_control
+                sleep_duration: 24h
+            - lambda: 'return;'  # Exit on_boot sequence
+      
+      # 5. Calculate adaptive sleep duration
+      - lambda: |-
+          uint32_t sleep_ms = ${DEFAULT_SLEEP_MINUTES} * 60 * 1000;
+          
+          // Override with Home Assistant input if available
+          if (id(ha_sleep_duration).has_state() && !std::isnan(id(ha_sleep_duration).state) && id(ha_sleep_duration).state > 0) {
+            sleep_ms = (uint32_t) (id(ha_sleep_duration).state * 60 * 1000);
+          }
+          
+          // Adaptive sleep: shorter intervals when solar is available
+          if (id(solar_voltage).has_state() && id(solar_voltage).state > 5.0) {
+            sleep_ms = std::min(sleep_ms, (uint32_t)15 * 60 * 1000);
+            ESP_LOGI("sleep", "Solar power detected - using shorter sleep interval");
+          }
+          
+          // Low battery - extend sleep duration
+          if (id(battery_voltage).has_state() && id(battery_voltage).state < ${BATTERY_CRITICAL_VOLTAGE} + 0.2) {
+            sleep_ms = std::max(sleep_ms, (uint32_t)60 * 60 * 1000);
+            ESP_LOGI("sleep", "Low battery - extending sleep duration");
+          }
+          
+          id(deep_sleep_control).set_sleep_duration(sleep_ms);
+      
+      # 6. Check for OTA wake window (Combined Approach)
+      # Stays awake if: OTA Wake Lock is ON OR daily 03:00-03:10
+      - lambda: |-
+          bool stay_awake = id(ota_wake_lock).state;
+          if (id(ha_time).has_time() && id(ha_time).now().hour == 3 && id(ha_time).now().minute < 10) {
+            stay_awake = true;
+            ESP_LOGI("ota", "Scheduled OTA window active (03:00-03:10)");
+          }
+          
+          if (stay_awake) {
+            ESP_LOGI("ota", "Staying awake for %d seconds for OTA", ${OTA_WAKE_WINDOW});
+            delay(${OTA_WAKE_WINDOW} * 1000);
+          }
+      
+      # 7. Turn off sensor to save power
+      - switch.turn_off: sensor_power
+      
+      # 8. Disable WiFi for deep sleep
+      - wifi.disable
+      
+      # 9. Enter deep sleep (only in production mode)
+      - if:
+          condition:
+            lambda: 'return std::string("${DEBUG_MODE}") == "NONE";'
+          then:
+            - deep_sleep.enter:
+                id: deep_sleep_control
 
+# ============================================================================
+# ESP32 SPECIFIC CONFIGURATION
+# ============================================================================
 esp32:
   variant: esp32c6
+  board: dfrobot_firebeetle2_esp32c6
+  cpu_frequency: ${CPU_FREQUENCY}
+  framework:
+    type: esp-idf
+    advanced:
+      compiler_optimization: SIZE
 
+# ============================================================================
+# DEEP SLEEP CONFIGURATION
+# ============================================================================
 deep_sleep:
   id: deep_sleep_control
+  run_duration: ${ULTRASONIC_WARMUP_TIME}s
 
-# Steuerung komplett nativ über die Substitution oben
+# ============================================================================
+# LOGGER CONFIGURATION
+# ============================================================================
 logger:
   level: ${DEBUG_MODE}
+  baud_rate: 0
 
+# ============================================================================
+# API FOR HOME ASSISTANT
+# ============================================================================
 api:
   encryption:
     key: "/JUP/LtiX5b9KApacnaQkBWx2xUE8YO2gHw6hAH+e5o="
+  port: 6053
+  reboot_timeout: 0s
 
+# ============================================================================
+# WIFI CONFIGURATION - Power Optimized
+# ============================================================================
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   fast_connect: true
+  power_save_mode: HIGH  # Maximum power saving for solar operation
   manual_ip:
     static_ip: ${WIFI_STATIC_IP}
     gateway: ${WIFI_GATEWAY}
     subnet: ${WIFI_SUBNET}
 
+# ============================================================================
+# TIME FROM HOME ASSISTANT (for scheduled OTA window)
+# ============================================================================
+time:
+  - platform: homeassistant
+    id: ha_time
+
+# ============================================================================
+# UART FOR ULTRASONIC SENSOR A02YYUW
+# ============================================================================
 uart:
   - id: uart_1
     baud_rate: 9600
     rx_pin: 17
     tx_pin: 16
 
-# Dieser Schalter trennt im Tiefschlaf den Sensor vom Strom (über Transistor/MOSFET)
+# ============================================================================
+# POWER CONTROL FOR SENSOR (Transistor/MOSFET)
+# ============================================================================
 switch:
   - platform: gpio
     pin: ${SENSOR_POWER_PIN}
@@ -87,8 +247,26 @@ switch:
     restore_mode: ALWAYS_OFF
     internal: true
 
+  # OTA Wake Lock - keeps device awake for OTA updates
+  # Visible in HA as "Wassertank OTA Wake Lock"
+  - platform: template
+    name: "Wassertank OTA Wake Lock"
+    id: ota_wake_lock
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - logger.log: "OTA wake lock engaged - staying awake for OTA"
+    turn_off_action:
+      - logger.log: "OTA wake lock released"
+
+# ============================================================================
+# SENSORS
+# ============================================================================
 sensor:
-  # Akkuspannung speziell für FireBeetle 2 ESP32-C6 (DFR1075)
+  
+  # ==========================================================================
+  # 1. BATTERY VOLTAGE
+  # ==========================================================================
   - platform: adc
     pin: ${BATTERY_ADC_PIN}
     name: "Wassertank Batterie Spannung"
@@ -96,22 +274,85 @@ sensor:
     unit_of_measurement: "V"
     icon: "mdi:battery"
     accuracy_decimals: 2
-    attenuation: 0db  # Wichtig für die präzise interne 1.1V Referenz des C6
+    attenuation: 0db  # Important for precise internal 1.1V reference of C6
     filters:
-      # Präzise Umrechnung des internen Spannungsteilers der FireBeetle
+      # Precise conversion of internal voltage divider of FireBeetle
       - calibrate_linear:
           - 0.0 -> 0.0
           - 1.1 -> 4.50 
-  # Holt die Schlafdauer aus Home Assistant
-  - platform: homeassistant
-    id: ha_sleep_duration
-    entity_id: input_number.wassertank_schlafdauer
-    internal: true
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+    on_value:
+      then:
+        - lambda: |-
+            float raw_voltage = x;
+            float min_volt = ${BATTERY_MIN_VOLTAGE};
+            float max_volt = ${BATTERY_MAX_VOLTAGE};
+            float charge_percent = 0.0;
+            
+            if (raw_voltage <= min_volt) {
+              charge_percent = 0.0;
+            } else if (raw_voltage >= max_volt) {
+              charge_percent = 100.0;
+            } else {
+              charge_percent = (raw_voltage - min_volt) / (max_volt - min_volt) * 100.0;
+            }
+            
+            if (charge_percent < 0.0) charge_percent = 0.0;
+            if (charge_percent > 100.0) charge_percent = 100.0;
+            
+            id(battery_charge_percent).publish_state(charge_percent);
 
-  # Physischer Ultraschallsensor (liefert Meter)
+  - platform: template
+    name: "Wassertank Batterie Ladegrad"
+    id: battery_charge_percent
+    unit_of_measurement: "%"
+    icon: "mdi:battery-charging"
+    accuracy_decimals: 0
+    device_class: battery
+    state_class: measurement
+
+  # ==========================================================================
+  # 2. SOLAR PANEL VOLTAGE (optional)
+  # ==========================================================================
+  - platform: adc
+    pin: ${SOLAR_ADC_PIN}
+    name: "Wassertank Solarzelle Spannung"
+    id: solar_voltage
+    unit_of_measurement: "V"
+    icon: "mdi:solar-panel"
+    accuracy_decimals: 2
+    attenuation: 0db
+    filters:
+      - calibrate_linear:
+          - 0.0 -> 0.0
+          - 1.1 -> ${SOLAR_VOLTAGE_DIVIDER}
+      - sliding_window_moving_average:
+          window_size: 3
+          send_every: 1
+
+  # ==========================================================================
+  # 3. ULTRASONIC SENSOR A02YYUW
+  # ==========================================================================
   - platform: a02yyuw
     id: sensor_a02yyuw_1
     uart_id: uart_1
+    name: "Wassertank Distanz"
+    unit_of_measurement: "m"
+    icon: "mdi:ruler"
+    accuracy_decimals: 3
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+      - lambda: |-
+          float distance = x;
+          // Validate distance readings
+          if (distance < 0.03 || distance > 4.50 || std::isnan(distance)) {
+            return NAN;
+          }
+          return distance;
     on_value:
       then:
         - lambda: |-
@@ -119,10 +360,11 @@ sensor:
             float max_depth = ${TANK_TOTAL_DEPTH};
             float water_level = max_depth - distance;
             if (water_level < 0.0) water_level = 0.0;
+            if (water_level > max_depth) water_level = max_depth;
             
             float liters = 0.0;
             std::string tank_type = "${TANK_TYPE}";
-
+            
             if (tank_type == "ROUND") {
               float radius = ${TANK_RADIUS};
               liters = 3.14159265 * radius * radius * water_level * 1000.0;
@@ -132,26 +374,63 @@ sensor:
               float width = ${TANK_WIDTH};
               liters = length * width * water_level * 1000.0;
             }
-
-            if (liters > ${TANK_MAX_LITERS}) liters = ${TANK_MAX_LITERS};
+            
+            float max_liters = ${TANK_MAX_LITERS};
+            if (liters > max_liters) liters = max_liters;
             if (liters < 0.0) liters = 0.0;
             
+            // Publish calculated liters
             id(wassertank_liter).publish_state(liters);
-
-            // Wenn wir nicht im Debug-Modus sind, wird die Schlafdauer berechnet und der Deep Sleep eingeleitet
+            
+            // Store previous distance for validation
+            id(previous_distance).publish_state(distance);
+            
+            // If not in debug mode, prepare deep sleep
             if (std::string("${DEBUG_MODE}") == "NONE") {
-              uint32_t sleep_ms = 30 * 60 * 1000;
+              uint32_t sleep_ms = ${DEFAULT_SLEEP_MINUTES} * 60 * 1000;
+              
+              // Override with Home Assistant input if available
               if (id(ha_sleep_duration).has_state() && !std::isnan(id(ha_sleep_duration).state) && id(ha_sleep_duration).state > 0) {
                 sleep_ms = (uint32_t) (id(ha_sleep_duration).state * 60 * 1000);
               }
+              
+              // Adaptive sleep based on solar voltage
+              if (id(solar_voltage).has_state() && id(solar_voltage).state > 5.0) {
+                sleep_ms = std::min(sleep_ms, (uint32_t)15 * 60 * 1000);  // Max 15 minutes
+              }
+              
+              // Low battery - extend sleep duration
+              if (id(battery_voltage).has_state() && id(battery_voltage).state < ${BATTERY_CRITICAL_VOLTAGE} + 0.2) {
+                sleep_ms = std::max(sleep_ms, (uint32_t)60 * 60 * 1000);  // Min 1 hour
+              }
+              
               id(deep_sleep_control).set_sleep_duration(sleep_ms);
               id(deep_sleep_control).setup();
             }
 
-  # Virtueller Sensor für Home Assistant
+  # Previous distance for validation
+  - platform: template
+    name: "Wassertank Distanz Vorherig"
+    id: previous_distance
+    unit_of_measurement: "m"
+    icon: "mdi:ruler"
+    accuracy_decimals: 3
+    internal: true
+
+  # ==========================================================================
+  # 4. TEMPLATE SENSORS FOR HOME ASSISTANT
+  # ==========================================================================
   - platform: template
     name: "Wassertank Inhalt"
     id: wassertank_liter
     unit_of_measurement: "l"
     icon: "mdi:water"
     accuracy_decimals: 1
+    device_class: ""
+    state_class: measurement
+
+  # Sleep duration from Home Assistant
+  - platform: homeassistant
+    id: ha_sleep_duration
+    entity_id: input_number.wassertank_schlafdauer
+    internal: true
