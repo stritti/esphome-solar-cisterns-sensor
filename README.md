@@ -56,7 +56,7 @@ This project provides precise water level measurement (in liters), battery volta
 | 2 | A02YYUW Waterproof Ultrasonic Sensor | 1 | 3-450cm range, UART interface, IP67 | Distance measurement | $8-12 |
 | 3 | 18650 Li-Ion Battery | 1 | 3.7V, 2000-3500mAh | Power source | $5-10 |
 | 4 | 18650 Battery Holder | 1 | With PH2.0 connector | Matches FireBeetle | $2-4 |
-| 5 | N-Channel MOSFET (IRLML6401) | 1 | Logic level, SMD or TO-220 | Sensor power control | $0.50-2 |
+| 5 | P-Channel MOSFET (IRLML6401) | 1 | Logic level, SOT-23, High-Side Switch | Sensor power control — Source=3V3, Drain=VCC, Gate=GPIO21 + 10k Pulldown | $0.50-2 |
 | 6 | 10kΩ Resistor | 2 | 1/4W, 5% tolerance | Voltage divider (optional) | $0.10 |
 | 7 | 33kΩ Resistor | 1 | 1/4W, 5% tolerance | Voltage divider (optional) | $0.10 |
 | 8 | Breadboard / Protoboard | 1 | Small size | For prototyping | $3-5 |
@@ -75,27 +75,43 @@ This project provides precise water level measurement (in liters), battery volta
 
 ### 📐 **Wiring Diagram**
 
-```
-DFRobot FireBeetle 2 ESP32-C6
-┌─────────────────────────────────────┐
-│                                     │
-│  GPIO16 (TX1) ────┬──── A02YYUW RX (Yellow)  │
-│  GPIO17 (RX1) ────┴──── A02YYUW TX (Green)   │
-│  GPIO21 ──────────┬──── MOSFET Gate              │
-│                   │    (or directly to VCC*)      │
-│  GPIO0 (A0) ─────┴──── Battery Voltage (built-in divider)│
-│  GPIO1 (A1) ───────── Solar Voltage (optional)    │
-│  GND ───────────────┬──── A02YYUW GND (Black)     │
-│                     ├──── MOSFET Source           │
-│                     └──── Battery Negative        │
-│  3.3V/5V ───────────┬──── MOSFET Drain            │
-│                     └──── A02YYUW VCC (Red)       │
-│  PH2.0 ──────────────── Battery Connector          │
-└─────────────────────────────────────┘
+> **Vector schematic (zoomable, printable) + Breadboard — instead of ASCII**
 
-*Direct GPIO power: A02YYUW draws ~50mA, which most GPIOs can handle briefly.
-For long-term reliability, use a MOSFET (IRLML6401 recommended).
+| Format | File | Description |
+|--------|-------|--------------|
+| **Schematic SVG** | [`docs/schematic.svg`](docs/schematic.svg) | Vector schematic with correct symbols (P-Channel High-Side) |
+| **Schematic PDF** | [`docs/schematic.pdf`](docs/schematic.pdf) | Print PDF, identical to SVG |
+| **KiCad Source** | [`docs/kicad/wassertank.kicad_sch`](docs/kicad/wassertank.kicad_sch) | Editable source (KiCad 7/8) |
+| **Breadboard SVG** | [`docs/fritzing/breadboard.svg`](docs/fritzing/breadboard.svg) | Fritzing-style breadboard view for beginners |
+| **Fritzing FZZ** | [`docs/fritzing/breadboard.fzz`](docs/fritzing/breadboard.fzz) | Fritzing project (ZIP) |
+
+#### Schematic (correct symbols, color-coded)
+
+![Wiring Schematic](docs/schematic.svg)
+
+*Colors: Red=Power/VCC, Black=GND, Yellow=UART TX→RX, Green=UART RX←TX, Purple=Gate, Blue=Battery, Orange=Solar. IRLML6401 **P-Channel**: Source→3V3, Drain→Sensor VCC, Gate→GPIO21 + 10k pulldown → GND. GPIO16/17 are UART-reserved!*
+
+#### Breadboard Assembly (physical)
+
+![Breadboard](docs/fritzing/breadboard.svg)
+
+*Plug 1:1 — keep wires < 30 cm, twist pairs. Mind the breadboard trench, mount sensor vertically above water.*
+
+<details>
+<summary>ASCII Reference (deprecated, for completeness — please use SVG)</summary>
+
 ```
+FireBeetle GPIO16 (TX) ──Yellow──→ A02YYUW RX
+FireBeetle GPIO17 (RX) ←─Green─── A02YYUW TX
+FireBeetle 3V3 ───────────────→ MOSFET Source (S) — IRLML6401 P-Ch
+MOSFET Drain (D) ───Red──→ A02YYUW VCC
+FireBeetle GPIO21 ──Purple──→ MOSFET Gate (G) + 10k pulldown → GND
+FireBeetle GND ───Black──→ A02YYUW GND + MOSFET pulldown + Battery − + Solar GND
+Battery 18650 +/− → FireBeetle PH2.0 (GPIO0 measures via internal divider)
+Solar 5–6V → 10k/33k divider → GPIO1 (factor 4.3)
+```
+
+</details>
 
 ### 🔌 **Detailed Wiring Instructions**
 
@@ -123,14 +139,18 @@ For long-term reliability, use a MOSFET (IRLML6401 recommended).
 - **Configuration**: Set `SOLAR_VOLTAGE_DIVIDER` in substitutions
 
 #### **5. Sensor Power Control (Recommended)**
+![MOSFET Detail](docs/schematic.svg)
+
+**Correct (P-Channel High-Side — swapped in old README):**
 ```
-FireBeetle GPIO21 ──┬── Gate (IRLML6401)
-                   │
-Battery Positive ──┴── Drain (IRLML6401)
-                   │
-A02YYUW VCC ───────┴── Source (IRLML6401)
+FireBeetle 3V3 ────────────→ MOSFET Source (S)  — IRLML6401 P-Ch, SOT-23
+FireBeetle GPIO21 ──→ MOSFET Gate (G) + 10k pulldown → GND
+MOSFET Drain (D) ──────────→ A02YYUW VCC (Red)
+FireBeetle GND ────────────→ A02YYUW GND (Black) + Battery − (common)
 ```
-- **MOSFET Type**: N-Channel, Logic Level (IRLML6401, IRLZ44N)
+- **MOSFET Type**: **P-Channel**, Logic Level (IRLML6401) — was incorrectly labeled as N-Channel, now corrected
+- **Alternative**: IRLML6402, AO3401 (all P-Channel, Vgs(th) < 2V)
+- **Important**: 10k pulldown Gate→GND prevents floating during deep-sleep (GPIO21 high-Z)
 - **Purpose**: Cut power to sensor during deep sleep (~50mA savings)
 
 ---
