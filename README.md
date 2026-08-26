@@ -36,7 +36,8 @@ This project provides precise water level measurement (in liters), battery volta
 - **Sleep Duration**: Controlled via Home Assistant `input_number` entity
 - **Static IP**: Configurable for reliable network connection
 - **Debug Mode**: Toggle between development (USB logging) and production (deep sleep)
-- **OTA Wake Window**: Automatic daily window + manual override for firmware updates
+- **OTA Wake Window**: Solar-powered daytime window + manual override for firmware updates
+- **Automatic Self-Updates**: Device polls a firmware manifest and flashes itself when power allows
 - **Adaptive Sleep**: Automatically adjusts sleep duration based on battery voltage and solar power
 
 ### 🛡️ **Safety Features**
@@ -243,6 +244,10 @@ substitutions:
   
   # ===== OTA UPDATE WINDOW =====
   OTA_WAKE_WINDOW: "300"       # Seconds to stay awake for OTA (5 min)
+  
+  # ===== FIRMWARE SELF-UPDATE (HTTP OTA) =====
+  FIRMWARE_VERSION: "1.0.0"    # MUST be bumped on every release
+  UPDATE_MANIFEST_URL: "http://homeassistant.local:8123/local/wassertank-sensor/manifest.json"
 ```
 
 ### 🚀 **Build and Flash**
@@ -320,31 +325,62 @@ After successful setup, these entities will appear in Home Assistant:
 | `sensor.wassertank_distanz` | Water Tank Distance | m | distance | measurement |
 | `sensor.wassertank_inhalt` | **Water Tank Content** | **l** | - | measurement |
 | `switch.wassertank_ota_wake_lock` | **Wassertank OTA Wake Lock** | - | switch | - |
+| `update.wassertank_firmware` | Wassertank Firmware | - | firmware | - |
 
 ---
 
 ## 🔄 **OTA Firmware Updates (Deep Sleep Compatible)**
 
-Since the device spends most of its time in deep sleep, OTA updates require a wake window. This project implements a **combined approach**:
+Since the device spends most of its time in deep sleep, OTA updates require a wake window. This project uses a **power-aware approach** instead of a fixed night window — at night the battery is at its weakest, so updates happen during sunny hours:
 
-### ⏰ **Automatic Daily Wake Window**
-- **Time**: Daily at **03:00 - 03:10** (configurable in code)
+### ☀️ **Automatic Solar-Powered Wake Window**
+- **Condition**: Solar voltage > 5.0V **AND** battery ≥ 50% (daytime, good power budget)
 - **Duration**: 5 minutes (configurable via `OTA_WAKE_WINDOW`)
 - **Behavior**: Device stays awake after measurement, allowing OTA push
+- **Safety**: Never stays awake for OTA when the battery is low
 
 ### 🎛️ **Manual Wake Lock (Home Assistant)**
 - **Entity**: `switch.wassertank_ota_wake_lock` (appears as "Wassertank OTA Wake Lock")
 - **Usage**: Toggle ON in HA → next wake cycle stays awake 5 minutes
 - **Auto-reset**: Switch returns to OFF after deep sleep
 
+### 🤖 **Automatic Self-Updates (HTTP OTA)**
+
+The device can update itself without an ESPHome dashboard connection. It polls a small manifest file on every wake cycle and flashes new firmware automatically — but only when the power budget allows (solar + battery ≥ 50%).
+
+**1. Host the firmware on Home Assistant**
+
+Copy files to `/config/www/wassertank-sensor/` (accessible via HA web server under `/local/`):
+
+```json
+// /config/www/wassertank-sensor/manifest.json
+{"name": "Wassertank Sensor", "version": "1.0.1",
+ "url": "http://homeassistant.local:8123/local/wassertank-sensor/wassertank-sensor.bin"}
+```
+
+> Adjust `homeassistant.local:8123` to your HA address. The `.bin` filename must match the uploaded file.
+
+**2. Release a new version**
+
+| Step | Action |
+|------|--------|
+| 1 | Bump `FIRMWARE_VERSION` in `wassertank-sensor.yaml` |
+| 2 | Build: `esphome compile wassertank-sensor.yaml` |
+| 3 | Copy `.esphome/build/wassertank-sensor/build/firmware.ota.bin` to HA as `wassertank-sensor.bin` |
+| 4 | Update `version` in `manifest.json` |
+| 5 | Done — device installs it on the next wake with sufficient power |
+
+**3. Manual install from Home Assistant**
+
+The Update entity (`update.wassertank_firmware`) shows "Update available" whenever the manifest version differs from the running firmware. Clicking **Install** triggers the download and flash immediately — regardless of the power gate.
+
 ### 📋 **How to Perform OTA Update**
 
-**Option A: Scheduled (Recommended)**
-1. Deploy firmware anytime via ESPHome dashboard or CLI
-2. Device automatically wakes at 03:00 next day
-3. Update applies during 5-minute window
+**Option A: Automatic Self-Update (Recommended)**
+1. Publish new firmware + manifest as described above
+2. Device checks on every wake cycle and self-installs during sunny hours
 
-**Option B: Immediate**
+**Option B: Push via ESPHome**
 1. In HA: Toggle **"Wassertank OTA Wake Lock"** ON
 2. Run: `esphome run wassertank-sensor.yaml` (or dashboard deploy)
 3. Device wakes on next cycle, stays awake 5 min, receives update
@@ -353,17 +389,12 @@ Since the device spends most of its time in deep sleep, OTA updates require a wa
 ### ⚙️ **Configuration**
 ```yaml
 substitutions:
-  OTA_WAKE_WINDOW: "300"  # Wake window in seconds (default: 300 = 5 min)
+  OTA_WAKE_WINDOW: "300"       # Wake window in seconds (default: 300 = 5 min)
+  FIRMWARE_VERSION: "1.0.0"    # Must match/track your releases
+  UPDATE_MANIFEST_URL: "http://homeassistant.local:8123/local/wassertank-sensor/manifest.json"
 ```
 
-### 🔧 **Customizing Wake Time**
-Edit the lambda in `on_boot` to change the scheduled window:
-```yaml
-# Current: 03:00 - 03:10
-if (id(ha_time).now().hour == 3 && id(ha_time).now().minute < 10)
-# Example: 02:00 - 02:15
-if (id(ha_time).now().hour == 2 && id(ha_time).now().minute < 15)
-```
+> **Note**: The very first flash of this firmware version must be done via USB or ESPHome push — HTTP self-update only works once the partition layout is on the device.
 
 ---
 
@@ -611,7 +642,8 @@ substitutions:
 - [ ] **Flash**: Firmware uploaded to FireBeetle 2
 - [ ] **Test**: Debug mode testing complete
 - [ ] **Production**: Switch to `DEBUG_MODE: "NONE"` for solar operation
-- [ ] **OTA Test**: Verify wake window works (toggle switch or wait for 03:00)
+- [ ] **OTA Test**: Verify wake window works (toggle switch or wait for sunny hours)
+- [ ] **Self-Update Test**: Upload manifest + firmware to HA, verify Update entity appears
 - [ ] **Solar Test**: Verify adaptive sleep with solar panel connected
 
 ---
@@ -620,6 +652,13 @@ substitutions:
 
 | **Version** | **Date** | **Changes** |
 |------------|----------|-------------|
+| 2.1.0 | 2026-08-26 | **OTA Overhaul** |
+| | | - Replaced fixed 03:00 night window with solar-powered OTA window (solar > 5V + battery ≥ 50%) |
+| | | - Added automatic self-updates via HTTP (`update`/`ota` http_request with manifest polling) |
+| | | - Added Update entity in Home Assistant for manual install |
+| | | - Fixed `has_time()` compile error (removed ESPHome API) |
+| | | - Force-read battery/solar ADC before power checks in on_boot |
+| | | - Removed unused Home Assistant time component |
 | 2.0.0 | 2026-08-24 | **Major Optimization Release** |
 | | | - Reduced boot time from 38s to 7s |
 | | | - Added WiFi power save mode HIGH |

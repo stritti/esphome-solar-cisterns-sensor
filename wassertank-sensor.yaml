@@ -87,6 +87,16 @@ substitutions:
   CPU_FREQUENCY: "80MHZ"
 
 # ============================================================================
+# FIRMWARE SELF-UPDATE (HTTP OTA)
+# ============================================================================
+# Current firmware version - MUST be bumped on every release
+  FIRMWARE_VERSION: "1.0.0"
+
+# Manifest URL (JSON: {"name": "...", "version": "...", "url": "<firmware.bin>"})
+# Example hosting in Home Assistant: copy manifest.json + .bin to /config/www/wassertank-sensor/
+  UPDATE_MANIFEST_URL: "http://homeassistant.local:8123/local/wassertank-sensor/manifest.json"
+
+# ============================================================================
 # ESPHOME CONFIGURATION
 # ============================================================================
 esphome:
@@ -94,6 +104,9 @@ esphome:
   friendly_name: Wassertank Sensor
   area: Garten
   min_version: 2026.8.0
+  project:
+    name: solar-cisterns.wassertank-sensor
+    version: ${FIRMWARE_VERSION}
 
   on_boot:
     priority: 800  # Very high priority: executed before logger starts
@@ -106,6 +119,11 @@ esphome:
       
       # 3. Wait for data processing and transmission
       - delay: ${MEASUREMENT_PROCESSING_TIME}s
+      
+      # 3b. Force-read battery & solar so the power checks below see fresh values
+      # (ADC default update_interval is 60s - without this, has_state() may be false)
+      - component.update: battery_voltage
+      - component.update: solar_voltage
       
       # 4. Check for low battery condition and enter emergency mode if critical
       - if:
@@ -145,16 +163,38 @@ esphome:
           
           id(deep_sleep_control).set_sleep_duration(sleep_ms);
       
-      # 6. Check for OTA wake window (Combined Approach)
-      # Stays awake if: OTA Wake Lock is ON OR daily 03:00-03:10
+      # 6. OTA window + automatic self-update
+      # Stays awake if: OTA Wake Lock is ON OR solar power with battery >= 50%
+      # (replaces the old fixed 03:00-03:10 night window - at night the battery
+      #  is at its weakest, so OTA is done during sunny hours instead)
+      - wait_until:
+          condition:
+            wifi.connected:
+          timeout: 60s
+      
+      # Fresh manifest poll, then wait for the result (UNKNOWN = unreachable)
+      - component.update: firmware_update
+      - wait_until:
+          condition:
+            lambda: 'return id(firmware_update).state != update::UPDATE_STATE_UNKNOWN;'
+          timeout: 20s
+      
       - lambda: |-
-          bool stay_awake = id(ota_wake_lock).state;
-          if (id(ha_time).has_time() && id(ha_time).now().hour == 3 && id(ha_time).now().minute < 10) {
-            stay_awake = true;
-            ESP_LOGI("ota", "Scheduled OTA window active (03:00-03:10)");
+          bool power_ok = id(solar_voltage).has_state() && id(solar_voltage).state > 5.0 &&
+                          id(battery_charge_percent).has_state() && id(battery_charge_percent).state >= 50.0;
+          
+          if (power_ok) {
+            ESP_LOGI("ota", "Solar power + battery >= 50%% - OTA window open");
+            
+            // Automatic self-update: only with a good power budget
+            if (id(firmware_update).state == update::UPDATE_STATE_AVAILABLE) {
+              ESP_LOGI("ota", "Firmware update available - installing now");
+              id(firmware_update).perform(false);
+              // perform() flashes and reboots; on success this line is never reached
+            }
           }
           
-          if (stay_awake) {
+          if (id(ota_wake_lock).state || power_ok) {
             ESP_LOGI("ota", "Staying awake for %d seconds for OTA", ${OTA_WAKE_WINDOW});
             delay(${OTA_WAKE_WINDOW} * 1000);
           }
@@ -222,11 +262,32 @@ wifi:
     subnet: ${WIFI_SUBNET}
 
 # ============================================================================
-# TIME FROM HOME ASSISTANT (for scheduled OTA window)
+# OTA UPDATES (native ESPHome push + HTTP self-update pull)
 # ============================================================================
-time:
-  - platform: homeassistant
-    id: ha_time
+ota:
+  - platform: esphome
+  - platform: http_request
+    id: http_ota
+
+# ============================================================================
+# HTTP REQUEST CLIENT (required for HTTP OTA)
+# ============================================================================
+http_request:
+
+# ============================================================================
+# FIRMWARE UPDATE CHECK
+# Polls the manifest on every wake cycle, exposes an Update entity in HA.
+# Manifest format:
+#   {"name": "Wassertank Sensor", "version": "1.0.1",
+#    "url": "http://homeassistant.local:8123/local/wassertank-sensor/wassertank-sensor.bin"}
+# ============================================================================
+update:
+  - platform: http_request
+    id: firmware_update
+    name: "Wassertank Firmware"
+    source: ${UPDATE_MANIFEST_URL}
+    ota_id: http_ota
+    update_interval: 6h  # fallback poll; fresh poll is forced on every wake
 
 # ============================================================================
 # UART FOR ULTRASONIC SENSOR A02YYUW
@@ -343,13 +404,16 @@ sensor:
     icon: "mdi:ruler"
     accuracy_decimals: 3
     filters:
+      # Component reports millimeters - convert to meters FIRST,
+      # otherwise the range check below rejects every valid reading.
+      - multiply: 0.001
       - sliding_window_moving_average:
           window_size: 5
           send_every: 1
       - lambda: |-
           float distance = x;
-          // Validate distance readings
-          if (distance < 0.03 || distance > 4.50 || std::isnan(distance)) {
+          // Validate distance readings (now in meters)
+          if (std::isnan(distance) || distance < 0.03 || distance > 4.50) {
             return NAN;
           }
           return distance;
