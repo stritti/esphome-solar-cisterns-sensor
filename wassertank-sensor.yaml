@@ -65,7 +65,8 @@ substitutions:
 # SOLAR CONFIGURATION (optional)
 # ============================================================================
 # Solar panel voltage divider factor (if SOLAR_ADC_PIN is active)
-# Example: 10k+33k divider = 4.3 (1.1V ref: 4.5V max)
+# 33k from Solar+ to GPIO1, 10k from GPIO1 to GND:
+# (33k + 10k) / 10k = 4.3
   SOLAR_VOLTAGE_DIVIDER: "4.3"
 
 # ============================================================================
@@ -303,9 +304,11 @@ uart:
 # ============================================================================
 switch:
   - platform: gpio
-    pin: ${SENSOR_POWER_PIN}
+    pin:
+      number: ${SENSOR_POWER_PIN}
+      inverted: true  # P-channel high-side: physical LOW = sensor ON
     id: sensor_power
-    restore_mode: ALWAYS_OFF
+    restore_mode: ALWAYS_OFF  # physical HIGH; external 10k pull-up keeps sensor OFF
     internal: true
 
   # OTA Wake Lock - keeps device awake for OTA updates
@@ -335,12 +338,10 @@ sensor:
     unit_of_measurement: "V"
     icon: "mdi:battery"
     accuracy_decimals: 2
-    attenuation: 0db  # Important for precise internal 1.1V reference of C6
+    attenuation: 12db  # GPIO0 sees up to about 2.1V from a full 4.2V cell
     filters:
-      # Precise conversion of internal voltage divider of FireBeetle
-      - calibrate_linear:
-          - 0.0 -> 0.0
-          - 1.1 -> 4.50 
+      # DFRobot specifies a 1:1 on-board divider: battery voltage = pin voltage × 2
+      - multiply: 2.0
       - sliding_window_moving_average:
           window_size: 5
           send_every: 1
@@ -384,11 +385,9 @@ sensor:
     unit_of_measurement: "V"
     icon: "mdi:solar-panel"
     accuracy_decimals: 2
-    attenuation: 0db
+    attenuation: 12db  # 5V panel / 4.3 = about 1.16V at GPIO1
     filters:
-      - calibrate_linear:
-          - 0.0 -> 0.0
-          - 1.1 -> ${SOLAR_VOLTAGE_DIVIDER}
+      - multiply: ${SOLAR_VOLTAGE_DIVIDER}
       - sliding_window_moving_average:
           window_size: 3
           send_every: 1

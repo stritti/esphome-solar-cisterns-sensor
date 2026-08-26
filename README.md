@@ -57,14 +57,13 @@ This project provides precise water level measurement (in liters), battery volta
 | 2 | A02YYUW Waterproof Ultrasonic Sensor | 1 | 3-450cm range, UART interface, IP67 | Distance measurement | $8-12 |
 | 3 | 18650 Li-Ion Battery | 1 | 3.7V, 2000-3500mAh | Power source | $5-10 |
 | 4 | 18650 Battery Holder | 1 | With PH2.0 connector | Matches FireBeetle | $2-4 |
-| 5 | P-Channel MOSFET (IRLML6401) | 1 | Logic level, SOT-23, High-Side Switch | Sensor power control — Source=3V3, Drain=VCC, Gate=GPIO21 + 10k Pulldown | $0.50-2 |
-| 6 | 10kΩ Resistor | 2 | 1/4W, 5% tolerance | Voltage divider (optional) | $0.10 |
-| 7 | 33kΩ Resistor | 1 | 1/4W, 5% tolerance | Voltage divider (optional) | $0.10 |
+| 5 | P-Channel MOSFET (IRLML6401) | 1 | Logic level, SOT-23, high-side switch | Source→3V3, Drain→sensor VCC, Gate→GPIO21 | $0.50-2 |
+| 6 | 10kΩ resistor | 2 | 1/4W, 5% tolerance | Gate pull-up to 3V3 and lower solar-divider resistor to GND | $0.10 |
+| 7 | 33kΩ resistor | 1 | 1/4W, 5% tolerance | Upper solar-divider resistor from Solar+ to GPIO1 | $0.10 |
 | 8 | Breadboard / Protoboard | 1 | Small size | For prototyping | $3-5 |
 | 9 | Jumper Wires | 10+ | Male-to-Female | Connections | $2-3 |
 | 10 | Waterproof Enclosure | 1 | IP65+ rated | For outdoor use | $5-15 |
-| 11 | Solar Panel (Optional) | 1 | 5-10W, 5-6V | For autonomous operation | $10-20 |
-| 12 | TP4056 Charging Module (Optional) | 1 | For solar charging | With protection | $2-4 |
+| 11 | Solar panel (optional) | 1 | Nominal 5V, compatible with the FireBeetle VIN input | Connect to the board’s integrated solar charger | $10-20 |
 
 ### 💰 **Total Estimated Cost**
 - **Basic Setup (Battery Powered)**: ~$35-50
@@ -72,87 +71,25 @@ This project provides precise water level measurement (in liters), battery volta
 
 ---
 
-## 🔧 Hardware Assembly
+## Hardware Assembly
 
-### 📐 **Wiring Diagram**
+The authoritative assembly reference is [`docs/WIRING.md`](docs/WIRING.md). It contains the exact net list, MOSFET truth table, solar-divider calculation, checks before power-up, and primary-source links.
 
-> **Vector schematic (zoomable, printable) + Breadboard — instead of ASCII**
+![Authoritative wiring diagram](docs/wiring.svg)
 
-| Format | File | Description |
-|--------|-------|--------------|
-| **Schematic SVG** | [`docs/schematic.svg`](docs/schematic.svg) | Vector schematic with correct symbols (P-Channel High-Side) |
-| **Schematic PDF** | [`docs/schematic.pdf`](docs/schematic.pdf) | Print PDF, identical to SVG |
-| **KiCad Source** | [`docs/kicad/wassertank.kicad_sch`](docs/kicad/wassertank.kicad_sch) | Editable source (KiCad 7/8) |
-| **Breadboard SVG** | [`docs/fritzing/breadboard.svg`](docs/fritzing/breadboard.svg) | Fritzing-style breadboard view for beginners |
-| **Fritzing FZZ** | [`docs/fritzing/breadboard.fzz`](docs/fritzing/breadboard.fzz) | Fritzing project (ZIP) |
+| Function | FireBeetle 2 ESP32-C6 | Other endpoint |
+|---|---|---|
+| Sensor supply | 3V3 → MOSFET Source; GPIO21 → Gate | MOSFET Drain → A02YYUW VCC |
+| Sensor ground | GND | A02YYUW GND |
+| UART to sensor | GPIO16 / TX | A02YYUW RX |
+| UART from sensor | GPIO17 / RX | A02YYUW TX |
+| Battery | PH2.0 battery connector | Protected 1-cell Li-ion, polarity verified |
+| Solar charging | VIN and GND | Nominal 5V solar panel |
+| Solar measurement | GPIO1 | Divider midpoint: 33kΩ from Solar+, 10kΩ to GND |
 
-#### Schematic (correct symbols, color-coded)
+> The IRLML6401 is a P-channel high-side switch. Its Gate requires a 10kΩ **pull-up to 3V3**. Sensor ON means GPIO21 is physically LOW; sensor OFF means GPIO21 is HIGH or held HIGH by the pull-up. Never use a pull-down here.
 
-![Wiring Schematic](docs/schematic.svg)
-
-*Colors: Red=Power/VCC, Black=GND, Yellow=UART TX→RX, Green=UART RX←TX, Purple=Gate, Blue=Battery, Orange=Solar. IRLML6401 **P-Channel**: Source→3V3, Drain→Sensor VCC, Gate→GPIO21 + 10k pulldown → GND. GPIO16/17 are UART-reserved!*
-
-#### Breadboard Assembly (physical)
-
-![Breadboard](docs/fritzing/breadboard.svg)
-
-*Plug 1:1 — keep wires < 30 cm, twist pairs. Mind the breadboard trench, mount sensor vertically above water.*
-
-<details>
-<summary>ASCII Reference (deprecated, for completeness — please use SVG)</summary>
-
-```
-FireBeetle GPIO16 (TX) ──Yellow──→ A02YYUW RX
-FireBeetle GPIO17 (RX) ←─Green─── A02YYUW TX
-FireBeetle 3V3 ───────────────→ MOSFET Source (S) — IRLML6401 P-Ch
-MOSFET Drain (D) ───Red──→ A02YYUW VCC
-FireBeetle GPIO21 ──Purple──→ MOSFET Gate (G) + 10k pulldown → GND
-FireBeetle GND ───Black──→ A02YYUW GND + MOSFET pulldown + Battery − + Solar GND
-Battery 18650 +/− → FireBeetle PH2.0 (GPIO0 measures via internal divider)
-Solar 5–6V → 10k/33k divider → GPIO1 (factor 4.3)
-```
-
-</details>
-
-### 🔌 **Detailed Wiring Instructions**
-
-#### **1. Main Controller: FireBeetle 2 ESP32-C6**
-- **Power**: Connect 3.7V Li-Ion battery to PH2.0 connector
-- **Alternative Power**: Use USB-C for development/testing
-
-#### **2. Ultrasonic Sensor: A02YYUW**
-| A02YYUW Pin | FireBeetle 2 Pin | Color | Notes |
-|-------------|------------------|-------|-------|
-| VCC | GPIO21 (via MOSFET) | Red | Power control for energy saving |
-| GND | GND | Black | Ground |
-| RX | GPIO16 (TX1) | Yellow | UART receive |
-| TX | GPIO17 (RX1) | Green | UART transmit |
-
-#### **3. Battery Voltage Monitoring**
-- **Direct Connection**: FireBeetle 2 has built-in voltage divider on GPIO0 (A0)
-- **Measurement Range**: 0-4.5V (covers single Li-Ion cell: 3.0-4.2V)
-- **No external divider needed** for battery monitoring
-
-#### **4. Solar Panel Voltage Monitoring (Optional)**
-- **Voltage Divider**: Use 10kΩ + 33kΩ resistors for 5-6V panels
-- **Connection**: Solar panel → Divider → GPIO1 (A1)
-- **Max Input**: ~16.5V (safe for 5-6V solar panels)
-- **Configuration**: Set `SOLAR_VOLTAGE_DIVIDER` in substitutions
-
-#### **5. Sensor Power Control (Recommended)**
-![MOSFET Detail](docs/schematic.svg)
-
-**Correct (P-Channel High-Side — swapped in old README):**
-```
-FireBeetle 3V3 ────────────→ MOSFET Source (S)  — IRLML6401 P-Ch, SOT-23
-FireBeetle GPIO21 ──→ MOSFET Gate (G) + 10k pulldown → GND
-MOSFET Drain (D) ──────────→ A02YYUW VCC (Red)
-FireBeetle GND ────────────→ A02YYUW GND (Black) + Battery − (common)
-```
-- **MOSFET Type**: **P-Channel**, Logic Level (IRLML6401) — was incorrectly labeled as N-Channel, now corrected
-- **Alternative**: IRLML6402, AO3401 (all P-Channel, Vgs(th) < 2V)
-- **Important**: 10k pulldown Gate→GND prevents floating during deep-sleep (GPIO21 high-Z)
-- **Purpose**: Cut power to sensor during deep sleep (~50mA savings)
+> Do not connect the panel voltage directly to GPIO1. Do not add a TP4056 in parallel with the FireBeetle charging circuit. Verify the PH2.0 battery polarity against the board labels before connecting a cell.
 
 ---
 
@@ -167,7 +104,7 @@ FireBeetle GND ────────────→ A02YYUW GND (Black) + Bat
 
 2. **Clone or Download Project**
    ```bash
-   git clone https://github.com/your-repo/esphome-solar-cisterns-sensor.git
+   git clone https://github.com/stritti/esphome-solar-cisterns-sensor.git
    cd esphome-solar-cisterns-sensor
    ```
 
@@ -487,24 +424,17 @@ Priority order:
 
 ### 🔋 **Battery Voltage Calibration**
 
-The FireBeetle 2 ESP32-C6 has a built-in voltage divider on GPIO0 with a 4.0909 multiplier.
+The FireBeetle 2 ESP32-C6 routes the battery monitor to GPIO0 through an on-board 1:1 divider. The manufacturer’s example therefore multiplies the measured pin voltage by 2. ESPHome must use 12dB attenuation because a full 4.2V cell produces about 2.1V at GPIO0.
 
-**To calibrate:**
-1. Measure actual battery voltage with a multimeter
-2. Compare with the reported value in Home Assistant
-3. Adjust the calibration points in the YAML:
+The configuration uses:
 
 ```yaml
+attenuation: 12db
 filters:
-  - calibrate_linear:
-      - 0.0 -> 0.0
-      - 1.1 -> 4.50    # Adjust this value
+  - multiply: 2.0
 ```
 
-**Example**: If your multimeter shows 3.85V but ESPHome reports 3.92V:
-- Current: 1.1 → 4.50 (ratio: 4.0909)
-- Needed: 1.1 → 4.45 (ratio: 4.045)
-- Change to: `- 1.1 -> 4.45`
+For final calibration, compare the Home Assistant value with a multimeter and replace the multiplier with a two-point `calibrate_linear` filter if necessary.
 
 ### 📏 **Tank Dimension Calibration**
 
@@ -534,18 +464,14 @@ The A02YYUW sensor has a range of 3cm to 450cm with 1mm resolution.
 
 ### ☀️ **Solar Voltage Calibration**
 
-If using solar voltage monitoring:
+The solar monitor uses 33kΩ from Solar+ to GPIO1 and 10kΩ from GPIO1 to GND:
 
-1. Measure actual solar panel voltage with a multimeter
-2. Compare with reported value in Home Assistant
-3. Adjust the divider factor:
+- Divider factor: `(33k + 10k) / 10k = 4.3`
+- GPIO1 at 5.0V panel voltage: approximately `1.16V`
+- ESPHome ADC attenuation: `12db`
+- Filter: `multiply: 4.3`
 
-```yaml
-substitutions:
-  SOLAR_VOLTAGE_DIVIDER: "4.3"  # For 10k+33k divider with 1.1V reference
-```
-
----
+Measure the panel voltage and the GPIO1 voltage with a multimeter before changing the factor. The panel still connects to FireBeetle VIN for charging; GPIO1 only measures the divided voltage.
 
 ## 🔧 **Troubleshooting**
 
@@ -559,7 +485,7 @@ substitutions:
 
 #### **2. Sensor Not Responding**
 - **Check**: UART wiring (RX→TX, TX→RX)
-- **Check**: Sensor power (GPIO21 should be HIGH during measurement)
+- **Check**: Sensor power (GPIO21 must be physically LOW during measurement and HIGH during deep sleep)
 - **Check**: Baud rate (9600 for A02YYUW)
 - **Fix**: Test sensor with separate UART adapter
 
@@ -570,9 +496,9 @@ substitutions:
 - **Fix**: Recalibrate tank dimensions
 
 #### **4. Battery Voltage Always 0V**
-- **Check**: GPIO0 connection
-- **Check**: Battery connection to PH2.0
-- **Fix**: FireBeetle 2 has built-in divider, no external circuit needed
+- **Check**: Battery connection and PH2.0 polarity
+- **Check**: `attenuation: 12db` and `multiply: 2.0` on GPIO0
+- **Fix**: Do not add an external battery divider; the FireBeetle already contains one
 
 #### **5. Device Not Waking Up**
 - **Check**: Deep sleep configuration
@@ -603,7 +529,7 @@ substitutions:
 | **Power** | Deep Sleep Mode | ~5μA consumption |
 | **Power** | WiFi Power Save HIGH | -30% WiFi consumption |
 | **Power** | CPU Frequency 80MHz | -20% consumption |
-| **Power** | Sensor Power Gating | ~50mA savings during sleep |
+| **Power** | Sensor Power Gating | up to 8mA average sensor current removed during sleep |
 | **Power** | Minimal Logging | Reduced active time |
 | **Power** | Fast Wakeup | <500ms connection |
 | **Reliability** | Low Battery Protection | Prevents deep discharge |
