@@ -27,8 +27,8 @@ Connections 1–4 apply only to Variant B. All remaining connections apply to bo
 | 3 | 10kΩ resistor | BC327-40 Base ↔ 3V3 | Pull-up; keeps the sensor off while the GPIO is high-impedance |
 | 4 | BC327-40 Collector | A02YYUW VCC | Switched 3.3V sensor supply |
 | 5 | FireBeetle GND | A02YYUW GND | Common ground |
-| 6 | FireBeetle GPIO16 / TX | A02YYUW RX | UART transmit and sensor output-mode selection |
-| 7 | A02YYUW TX | FireBeetle GPIO17 / RX | UART distance data at 9600 baud |
+| 6 | Switched sensor VCC | A02YYUW RX | Holds RX HIGH while powered for processed output; falls with VCC when switched off |
+| 7 | A02YYUW TX | FireBeetle GPIO17 / RX | UART distance data at 9600 baud; receive-only MCU connection |
 | 8 | Protected 1-cell Li-ion | FireBeetle PH2.0 | Main battery; verify polarity against the board labels |
 | 9 | Nominal 5V solar panel + | FireBeetle VIN | Input to the board’s integrated solar charger |
 | 10 | Solar panel GND | FireBeetle GND | Charging and measurement reference |
@@ -92,8 +92,8 @@ Do not add another divider to GPIO0.
 7. Verify that the solar divider is 33kΩ above GPIO1 and 10kΩ below GPIO1.
 8. Verify the PH2.0 polarity against the `+` and `-` labels on the FireBeetle board.
 9. Power from USB first. For Variant B in debug mode, GPIO21 must be LOW while measuring and HIGH after the sensor is switched off.
-10. Confirm with a multimeter that GPIO0 and GPIO1 remain within the ESP32-C6 ADC input range.
-11. Before connecting a nominal 6V panel to VIN, measure its open-circuit voltage in bright sun and verify it against the exact board revision's input limit.
+11. Confirm with a multimeter that GPIO0 and GPIO1 remain within the ESP32-C6 ADC input range.
+12. Before connecting a nominal 6V panel to VIN, measure its open-circuit voltage in bright sun and verify it against the exact board revision's input limit.
 
 ## Primary sources
 
