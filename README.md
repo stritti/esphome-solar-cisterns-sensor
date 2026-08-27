@@ -372,7 +372,7 @@ The BC327-40 sensor-saving calculation remains independent of these network wait
 
 ### 6V / 1W panel
 
-A 1W panel can theoretically generate 1Wh during one hour at its rated operating point. Replacing an estimated 22–24mWh daily system consumption with BC327-40 therefore needs only about 1.5 minutes of ideal rated output. With charging, regulator, temperature, alignment, and low-light losses, allow several minutes of strong sunlight. On energy capacity, a 1W panel is sufficient for this measurement interval with substantial reserve.
+A 1W panel can theoretically generate 1Wh during one hour at its rated operating point. The three calculated controller scenarios correspond to about 1.5, 16, or 69 minutes of ideal rated output per day. Charging, regulator, temperature, alignment, and low-light losses extend these times. Judge the installation from measured total wake time and actual daily panel yield, not from the 7-second lower bound alone.
 
 Without the BC327-40, the sensor alone consumes up to 0.634Wh/day. This corresponds to 38 minutes of ideal 1W output or roughly 45–55 minutes after typical conversion losses.
 
