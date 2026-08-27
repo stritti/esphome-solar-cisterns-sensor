@@ -4,6 +4,26 @@
 
 ESPHome-Projekt zur solarbetriebenen Füllstandsmessung mit einem DFRobot FireBeetle 2 ESP32-C6 und dem wasserdichten Ultraschallsensor A02YYUW. Das Gerät misst Füllstand, Wasservolumen, Batterie- und Solarspannung und nutzt Deep Sleep für einen niedrigen Energieverbrauch.
 
+## Dokumentationswebsite
+
+Die zweisprachige VitePress-Dokumentation wird nach Änderungen auf `main` unter [stritti.github.io/esphome-solar-cisterns-sensor](https://stritti.github.io/esphome-solar-cisterns-sensor/) veröffentlicht.
+
+Lokale Vorschau:
+
+```bash
+npm install
+npm run docs:dev
+```
+
+Produktions-Build prüfen:
+
+```bash
+npm run docs:build
+npm run docs:preview
+```
+
+Der Workflow `.github/workflows/deploy-docs.yml` erstellt und veröffentlicht die Website über GitHub Pages. Einmalig muss unter **Settings → Pages → Build and deployment → Source** die Option **GitHub Actions** ausgewählt werden.
+
 ## Funktionen
 
 - Füllstand und Entfernung über A02YYUW mit UART
