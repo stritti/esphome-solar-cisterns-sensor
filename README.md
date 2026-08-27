@@ -18,7 +18,7 @@ This project provides precise water level measurement (in liters), battery volta
 - **Water Tank Solar Panel Voltage** - Solar panel voltage in **volts** (optional)
 
 ### ⚡ **Power Optimization**
-- **Deep Sleep Mode**: ~5μA current consumption during sleep
+- **Deep Sleep Mode**: 16μA (board revision 1.0) or 36μA (revision 1.2), according to DFRobot
 - **Ultra-Fast Wakeup**: <500ms WiFi connection with static IP
 - **Power Gating**: Sensor power controlled via a through-hole BC327-40 PNP transistor
 - **WiFi Power Save**: HIGH mode for maximum energy saving
@@ -352,55 +352,27 @@ substitutions:
 
 ---
 
-## ⚡ **Power Consumption Analysis**
+## Power consumption and 1W solar-panel estimate
 
-### 📉 **Current Consumption**
+The following estimate uses the configured 30-minute interval, 7 seconds active time per cycle, and the existing approximately 60mA active-current assumption. DFRobot specifies 16μA deep-sleep current for FireBeetle revision 1.0 and 36μA for revision 1.2.
 
-| **State** | **Current** | **Duration** | **Energy per Cycle** |
-|----------|-------------|--------------|---------------------|
-| Deep Sleep | ~5μA | 30 minutes | ~0.004mAh |
-| Active (WiFi + Sensor) | ~60mA | ~7 seconds | ~0.12mAh |
-| **Total per Cycle** | - | 30 min 7 sec | **~0.124mAh** |
+| Contribution | Daily consumption |
+|---|---:|
+| 48 active phases × 7s × approximately 60mA | approximately 5.60mAh |
+| Remaining 23.91h at 16–36μA | approximately 0.38–0.86mAh |
+| **Estimated total with BC327-40** | **approximately 6.0–6.5mAh/day** |
 
-**Improvements over original:**
-- Boot time reduced from 38s to 7s (-82%)
-- WiFi power save mode HIGH (-30% WiFi consumption)
-- CPU frequency 80MHz (-20% consumption)
+At a nominal battery voltage of 3.7V this is approximately 22–24mWh/day. This is an engineering estimate, not a guaranteed measurement. Slow WiFi association, poor signal, failed connections, OTA windows, battery losses, low temperature, and regulator losses increase consumption.
 
-### 🔋 **Battery Life Estimation**
+Without BC327-40 power gating, the continuously powered A02YYUW adds up to approximately 192mAh or 0.634Wh per day on the 3.3V rail. That would dominate the complete system load.
 
-| **Battery Capacity** | **Sleep Interval** | **Estimated Runtime** | **Improvement** |
-|---------------------|-------------------|---------------------|----------------|
-| 2000mAh | 30 minutes | ~470 cycles = **352 days** (~11.7 months) | +52% |
-| 2000mAh | 60 minutes | ~235 cycles = **176 days** (~5.8 months) | +53% |
-| 3500mAh | 30 minutes | ~822 cycles = **616 days** (~20.5 months) | +52% |
-| 3500mAh | 60 minutes | ~411 cycles = **308 days** (~10.2 months) | +54% |
+### 6V / 1W panel
 
-**Note**: Actual runtime depends on:
-- Battery quality and self-discharge
-- Solar charging efficiency (if used)
-- Temperature conditions
-- WiFi signal strength
-- Adaptive sleep behavior (shorter intervals with solar power)
+A 1W panel can theoretically generate 1Wh during one hour at its rated operating point. Replacing an estimated 22–24mWh daily system consumption with BC327-40 therefore needs only about 1.5 minutes of ideal rated output. With charging, regulator, temperature, alignment, and low-light losses, allow several minutes of strong sunlight. On energy capacity, a 1W panel is sufficient for this measurement interval with substantial reserve.
 
-### ☀️ **Solar Power Requirements**
+Without the BC327-40, the sensor alone consumes up to 0.634Wh/day. This corresponds to 38 minutes of ideal 1W output or roughly 45–55 minutes after typical conversion losses.
 
-For **autonomous solar operation**:
-
-| **Component** | **Power Requirement** | **Notes** |
-|--------------|----------------------|-----------|
-| ESP32-C6 (Active) | ~180mW | During measurement (80MHz) |
-| ESP32-C6 (Sleep) | ~17μW | Negligible |
-| A02YYUW Sensor | ~150mW | During measurement |
-| **Total Active** | **~330mW** | For ~7 seconds |
-| **Energy per Day** | **~1.7mWh** | At 30min interval with adaptive sleep |
-
-**Solar Panel Recommendation:**
-- **Minimum**: 5W panel with 2000mAh battery
-- **Recommended**: 10W panel with 3500mAh battery
-- **Optimal**: 10W panel with MPPT charger + 5000mAh battery
-
----
+Power rating is not the electrical compatibility criterion. DFRobot specifies FireBeetle VIN for 5V DC or a 5V solar panel. Measure the open-circuit voltage of the 6V panel in bright sun; a nominal 6V panel may exceed its rated voltage with no load. Do not connect it directly to VIN unless the measured maximum is within the verified input limit for the exact FireBeetle revision.
 
 ## 🛡️ **Safety Features**
 
@@ -543,7 +515,7 @@ Measure the panel voltage and the GPIO1 voltage with a multimeter before changin
 
 | **Category** | **Optimization** | **Impact** |
 |--------------|------------------|------------|
-| **Power** | Deep Sleep Mode | ~5μA consumption |
+| **Power** | Deep Sleep Mode | 16μA (rev. 1.0) or 36μA (rev. 1.2), plus external circuitry |
 | **Power** | WiFi Power Save HIGH | -30% WiFi consumption |
 | **Power** | CPU Frequency 80MHz | -20% consumption |
 | **Power** | Sensor Power Gating | up to 8mA average sensor current removed during sleep |
