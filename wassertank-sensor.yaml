@@ -12,7 +12,7 @@ substitutions:
 # Optional sensor power control (BC327-40 PNP; 4.7kΩ GPIO-to-Base, 10kΩ Base-to-3V3)
 # Without power gating: connect sensor VCC directly to 3V3 and leave this GPIO unconnected.
 # Safe GPIOs: GPIO1, GPIO2, GPIO3, GPIO20, GPIO21, GPIO22, GPIO23
-# GPIO16/17 are reserved for UART!
+# GPIO17 is reserved for UART RX. GPIO16 is not used by the sensor.
   SENSOR_POWER_PIN: "GPIO21"
   
 # Battery voltage measurement (Analog)
@@ -301,7 +301,8 @@ uart:
   - id: uart_1
     baud_rate: 9600
     rx_pin: 17
-    tx_pin: 16
+    # A02YYUW RX is tied to the switched sensor VCC for processed output.
+    # Do not drive it from an MCU GPIO while sensor power is off.
 
 # ============================================================================
 # OPTIONAL POWER CONTROL FOR SENSOR (BC327-40 PNP HIGH-SIDE SWITCH)
