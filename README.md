@@ -449,7 +449,7 @@ For final calibration, compare the Home Assistant value with a multimeter and re
 The A02YYUW sensor has a range of 3cm to 450cm with 1mm resolution.
 
 **Troubleshooting:**
-- **No readings**: Check UART wiring (RX→TX, TX→RX)
+- **No readings**: Check A02YYUW TX→GPIO17/RX and A02YYUW RX→switched sensor VCC
 - **Incorrect readings**: Ensure sensor is mounted perpendicular to water surface
 - **Jittery readings**: Add more filtering (increase `window_size` in filters)
 
