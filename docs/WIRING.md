@@ -88,12 +88,14 @@ Do not add another divider to GPIO0.
 3. For Variant B, verify that the BC327-40 Emitter connects to 3V3 and Collector connects to sensor VCC.
 4. For Variant B, verify 4.7kΩ between GPIO21 and Base, and 10kΩ between Base and 3V3. There must be no Base-to-GND pull-down.
 5. For Variant B, verify the BC327-40 pin order against the datasheet for the purchased manufacturer.
-6. Verify continuity of all GND connections.
-7. Verify that the solar divider is 33kΩ above GPIO1 and 10kΩ below GPIO1.
-8. Verify the PH2.0 polarity against the `+` and `-` labels on the FireBeetle board.
-9. Power from USB first. For Variant B in debug mode, GPIO21 must be LOW while measuring and HIGH after the sensor is switched off.
-11. Confirm with a multimeter that GPIO0 and GPIO1 remain within the ESP32-C6 ADC input range.
-12. Before connecting a nominal 6V panel to VIN, measure its open-circuit voltage in bright sun and verify it against the exact board revision's input limit.
+6. Verify that A02YYUW RX connects to switched sensor VCC, not GPIO16. This prevents back-powering through RX when the sensor is off.
+7. Verify A02YYUW TX connects only to FireBeetle GPIO17 / RX.
+8. Verify continuity of all GND connections.
+9. Verify that the solar divider is 33kΩ above GPIO1 and 10kΩ below GPIO1.
+10. Verify the PH2.0 polarity against the `+` and `-` labels on the FireBeetle board.
+11. Power from USB first. For Variant B in debug mode, GPIO21 must be LOW while measuring and HIGH after the sensor is switched off.
+12. Confirm with a multimeter that GPIO0 and GPIO1 remain within the ESP32-C6 ADC input range.
+13. Before connecting a nominal 6V panel to VIN, measure its open-circuit voltage in bright sun and verify it against the exact board revision's input limit.
 
 ## Primary sources
 
