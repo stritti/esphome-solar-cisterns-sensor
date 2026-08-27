@@ -20,7 +20,7 @@ This project provides precise water level measurement (in liters), battery volta
 ### ⚡ **Power Optimization**
 - **Deep Sleep Mode**: ~5μA current consumption during sleep
 - **Ultra-Fast Wakeup**: <500ms WiFi connection with static IP
-- **Power Gating**: Sensor power controlled via GPIO/MOSFET
+- **Power Gating**: Sensor power controlled via a through-hole BC327-40 PNP transistor
 - **WiFi Power Save**: HIGH mode for maximum energy saving
 - **Minimal Logging**: Disabled in production mode
 - **CPU Frequency**: 80MHz for reduced power consumption
@@ -57,13 +57,14 @@ This project provides precise water level measurement (in liters), battery volta
 | 2 | A02YYUW Waterproof Ultrasonic Sensor | 1 | 3-450cm range, UART interface, IP67 | Distance measurement | $8-12 |
 | 3 | 18650 Li-Ion Battery | 1 | 3.7V, 2000-3500mAh | Power source | $5-10 |
 | 4 | 18650 Battery Holder | 1 | With PH2.0 connector | Matches FireBeetle | $2-4 |
-| 5 | P-Channel MOSFET (IRLML6401) | 1 | Logic level, SOT-23, high-side switch | Source→3V3, Drain→sensor VCC, Gate→GPIO21 | $0.50-2 |
-| 6 | 10kΩ resistor | 2 | 1/4W, 5% tolerance | Gate pull-up to 3V3 and lower solar-divider resistor to GND | $0.10 |
-| 7 | 33kΩ resistor | 1 | 1/4W, 5% tolerance | Upper solar-divider resistor from Solar+ to GPIO1 | $0.10 |
-| 8 | Breadboard / Protoboard | 1 | Small size | For prototyping | $3-5 |
-| 9 | Jumper Wires | 10+ | Male-to-Female | Connections | $2-3 |
-| 10 | Waterproof Enclosure | 1 | IP65+ rated | For outdoor use | $5-15 |
-| 11 | Solar panel (optional) | 1 | Nominal 5V, compatible with the FireBeetle VIN input | Connect to the board’s integrated solar charger | $10-20 |
+| 5 | PNP transistor (BC327-40) | 1 | TO-92, through-hole, high-side switch | Emitter→3V3, Collector→sensor VCC | $0.20-1 |
+| 6 | 4.7kΩ resistor | 1 | 1/4W, 5% tolerance | GPIO21 to BC327-40 Base | $0.10 |
+| 7 | 10kΩ resistor | 2 | 1/4W, 5% tolerance | Base pull-up to 3V3 and lower solar-divider resistor to GND | $0.10 |
+| 8 | 33kΩ resistor | 1 | 1/4W, 5% tolerance | Upper solar-divider resistor from Solar+ to GPIO1 | $0.10 |
+| 9 | Breadboard / Protoboard | 1 | Small size | For prototyping | $3-5 |
+| 10 | Jumper Wires | 10+ | Male-to-Female | Connections | $2-3 |
+| 11 | Waterproof Enclosure | 1 | IP65+ rated | For outdoor use | $5-15 |
+| 12 | Solar panel (optional) | 1 | Nominal 5V, compatible with the FireBeetle VIN input | Connect to the board’s integrated solar charger | $10-20 |
 
 ### 💰 **Total Estimated Cost**
 - **Basic Setup (Battery Powered)**: ~$35-50
@@ -73,13 +74,13 @@ This project provides precise water level measurement (in liters), battery volta
 
 ## Hardware Assembly
 
-The authoritative assembly reference is [`docs/WIRING.md`](docs/WIRING.md). It contains the exact net list, MOSFET truth table, solar-divider calculation, checks before power-up, and primary-source links.
+The authoritative assembly reference is [`docs/WIRING.md`](docs/WIRING.md). It contains the exact net list, transistor truth table, solar-divider calculation, checks before power-up, and primary-source links.
 
 ![Authoritative wiring diagram](docs/wiring.svg)
 
 | Function | FireBeetle 2 ESP32-C6 | Other endpoint |
 |---|---|---|
-| Sensor supply | 3V3 → MOSFET Source; GPIO21 → Gate | MOSFET Drain → A02YYUW VCC |
+| Sensor supply | 3V3 → BC327-40 Emitter; GPIO21 → 4.7kΩ → Base | BC327-40 Collector → A02YYUW VCC; 10kΩ from Base to 3V3 |
 | Sensor ground | GND | A02YYUW GND |
 | UART to sensor | GPIO16 / TX | A02YYUW RX |
 | UART from sensor | GPIO17 / RX | A02YYUW TX |
@@ -87,7 +88,7 @@ The authoritative assembly reference is [`docs/WIRING.md`](docs/WIRING.md). It c
 | Solar charging | VIN and GND | Nominal 5V solar panel |
 | Solar measurement | GPIO1 | Divider midpoint: 33kΩ from Solar+, 10kΩ to GND |
 
-> The IRLML6401 is a P-channel high-side switch. Its Gate requires a 10kΩ **pull-up to 3V3**. Sensor ON means GPIO21 is physically LOW; sensor OFF means GPIO21 is HIGH or held HIGH by the pull-up. Never use a pull-down here.
+> The BC327-40 is a PNP high-side switch in a beginner-friendly TO-92 package. GPIO21 connects to its Base through 4.7kΩ; a 10kΩ pull-up from Base to 3V3 keeps the sensor off during boot and deep sleep. Sensor ON means GPIO21 is physically LOW.
 
 > Do not connect the panel voltage directly to GPIO1. Do not add a TP4056 in parallel with the FireBeetle charging circuit. Verify the PH2.0 battery polarity against the board labels before connecting a cell.
 
@@ -140,7 +141,7 @@ substitutions:
   DEBUG_MODE: "NONE"          # "DEBUG" for development, "NONE" for solar operation
   
   # ===== HARDWARE PINS =====
-  SENSOR_POWER_PIN: "GPIO21"  # Sensor power control (MOSFET gate)
+  SENSOR_POWER_PIN: "GPIO21"  # BC327-40 Base control via 4.7kΩ resistor
   BATTERY_ADC_PIN: "GPIO0"    # Battery voltage (built-in divider)
   SOLAR_ADC_PIN: "GPIO1"      # Solar voltage (optional)
   
