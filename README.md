@@ -57,9 +57,9 @@ This project provides precise water level measurement (in liters), battery volta
 | 2 | A02YYUW Waterproof Ultrasonic Sensor | 1 | 3-450cm range, UART interface, IP67 | Distance measurement | $8-12 |
 | 3 | 18650 Li-Ion Battery | 1 | 3.7V, 2000-3500mAh | Power source | $5-10 |
 | 4 | 18650 Battery Holder | 1 | With PH2.0 connector | Matches FireBeetle | $2-4 |
-| 5 | PNP transistor (BC327-40) | 1 | TO-92, through-hole, high-side switch | Emitter→3V3, Collector→sensor VCC | $0.20-1 |
-| 6 | 4.7kΩ resistor | 1 | 1/4W, 5% tolerance | GPIO21 to BC327-40 Base | $0.10 |
-| 7 | 10kΩ resistor | 2 | 1/4W, 5% tolerance | Base pull-up to 3V3 and lower solar-divider resistor to GND | $0.10 |
+| 5 | PNP transistor (BC327-40, optional) | 1 | TO-92, through-hole, high-side switch | Recommended for low-power operation; Emitter→3V3, Collector→sensor VCC | $0.20-1 |
+| 6 | 4.7kΩ resistor (optional) | 1 | 1/4W, 5% tolerance | Required only with BC327-40: GPIO21 to Base | $0.10 |
+| 7 | 10kΩ resistor | 2 | 1/4W, 5% tolerance | One required for solar divider; second required only with BC327-40 as Base-to-3V3 pull-up | $0.10 |
 | 8 | 33kΩ resistor | 1 | 1/4W, 5% tolerance | Upper solar-divider resistor from Solar+ to GPIO1 | $0.10 |
 | 9 | Breadboard / Protoboard | 1 | Small size | For prototyping | $3-5 |
 | 10 | Jumper Wires | 10+ | Male-to-Female | Connections | $2-3 |
@@ -88,9 +88,25 @@ The authoritative assembly reference is [`docs/WIRING.md`](docs/WIRING.md). It c
 | Solar charging | VIN and GND | Nominal 5V solar panel |
 | Solar measurement | GPIO1 | Divider midpoint: 33kΩ from Solar+, 10kΩ to GND |
 
-> The BC327-40 is a PNP high-side switch in a beginner-friendly TO-92 package. GPIO21 connects to its Base through 4.7kΩ; a 10kΩ pull-up from Base to 3V3 keeps the sensor off during boot and deep sleep. Sensor ON means GPIO21 is physically LOW.
+> The BC327-40 power-gating circuit is optional. For the simplest build, connect A02YYUW VCC directly to 3V3 and leave GPIO21 unconnected. For low-power operation, use the BC327-40: GPIO21 connects to its Base through 4.7kΩ; a 10kΩ pull-up from Base to 3V3 keeps the sensor off during boot and deep sleep. Sensor ON means GPIO21 is physically LOW.
 
 > Do not connect the panel voltage directly to GPIO1. Do not add a TP4056 in parallel with the FireBeetle charging circuit. Verify the PH2.0 battery polarity against the board labels before connecting a cell.
+
+### Optional BC327-40: energy saving
+
+DFRobot specifies up to 8mA average current for the A02YYUW. The calculation below uses the default 30-minute interval and the configured 7-second sensor-on time per cycle.
+
+| Configuration | Sensor-on time per day | Consumption on 3.3V rail | Energy per day |
+|---|---:|---:|---:|
+| Direct VCC connection, no power gating | 24h | up to 192mAh | up to 0.634Wh |
+| BC327-40 power gating | 336s | about 0.80mAh including Base current | about 0.0026Wh |
+| **Saving due to BC327-40** | | **about 191mAh/day** | **about 0.631Wh/day (99.6%)** |
+
+Assumptions: 48 cycles/day, 7 seconds on per cycle, A02YYUW at 8mA, BC327-40 Base current approximately `(3.3V - 0.7V) / 4.7kΩ = 0.55mA`. These values cover only the sensor switching circuit. FireBeetle, WiFi, charger, regulator losses, battery self-discharge, temperature, and solar conditions are additional.
+
+A 6V/1W panel supplies at most 1Wh per hour at its rated operating point. The avoided 0.631Wh/day therefore corresponds to about 38 minutes of ideal full rated output, or roughly 45–55 minutes after typical conversion losses. The actual daily yield depends strongly on orientation, shading, season, temperature, and the panel's voltage-current curve.
+
+**6V panel warning:** DFRobot specifies the FireBeetle VIN input for 5V DC or a 5V solar panel. A panel sold as “6V” can have an open-circuit voltage above 6V. Measure its open-circuit voltage in bright sun and do not connect it directly unless it stays within the verified input limit of the exact FireBeetle board revision. The 33kΩ/10kΩ GPIO1 divider is suitable for measuring 6V, but that does not make 6V safe for VIN.
 
 ---
 
