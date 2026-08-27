@@ -6,6 +6,7 @@ on:
     paths:
       - 'docs/**'
       - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
@@ -31,12 +32,14 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Configure Pages
         uses: actions/configure-pages@v4
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Build documentation
         run: npm run docs:build

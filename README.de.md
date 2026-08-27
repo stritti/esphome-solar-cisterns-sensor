@@ -11,7 +11,7 @@ Die zweisprachige VitePress-Dokumentation wird nach Änderungen auf `main` unter
 Lokale Vorschau:
 
 ```bash
-npm install
+npm ci
 npm run docs:dev
 ```
 
@@ -22,7 +22,7 @@ npm run docs:build
 npm run docs:preview
 ```
 
-Der Workflow `.github/workflows/deploy-docs.yml` erstellt und veröffentlicht die Website über GitHub Pages. Einmalig muss unter **Settings → Pages → Build and deployment → Source** die Option **GitHub Actions** ausgewählt werden.
+Der Workflow `.github/workflows/deploy-docs.yml` erstellt und veröffentlicht die Website über GitHub Pages. Er verwendet die eingecheckte `package-lock.json`, `npm ci` und den npm-Cache von `actions/setup-node`. Unveränderte Pakete werden dadurch aus dem Cache wiederhergestellt und nicht erneut heruntergeladen. Einmalig muss unter **Settings → Pages → Build and deployment → Source** die Option **GitHub Actions** ausgewählt werden.
 
 ## Funktionen
 

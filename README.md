@@ -15,7 +15,7 @@ The bilingual VitePress site is published at [stritti.github.io/esphome-solar-ci
 Local preview:
 
 ```bash
-npm install
+npm ci
 npm run docs:dev
 ```
 
@@ -26,7 +26,7 @@ npm run docs:build
 npm run docs:preview
 ```
 
-The workflow `.github/workflows/deploy-docs.yml` builds and deploys through GitHub Pages. The repository setting **Settings → Pages → Build and deployment → Source** must be set to **GitHub Actions** once.
+The workflow `.github/workflows/deploy-docs.yml` builds and deploys through GitHub Pages. It uses the committed `package-lock.json`, `npm ci`, and the npm cache provided by `actions/setup-node`; unchanged packages are restored from the cache instead of downloaded again. The repository setting **Settings → Pages → Build and deployment → Source** must be set to **GitHub Actions** once.
 
 ---
 
