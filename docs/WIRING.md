@@ -47,7 +47,15 @@ DFRobot specifies an A02YYUW average current of up to 8mA. With the default 30-m
 
 The Base-current estimate is `(3.3V - 0.7V) / 4.7kΩ ≈ 0.55mA`. The calculation covers the sensor switching circuit only. Board consumption, WiFi, charging and regulator losses are separate.
 
-For a 6V/1W panel, 0.631Wh corresponds to about 38 minutes at the ideal rated 1W output, or roughly 45–55 minutes after conversion losses. Real yield depends on sunlight, angle, shading, temperature, and the panel curve.
+The 0.631Wh saving above applies only to the sensor rail. Controller energy depends on total wake time:
+
+| Controller scenario | Awake time per cycle | Approximate energy/day at 3.7V | Ideal 1W-panel time |
+|---|---:|---:|---:|
+| theoretical lower bound | 7s | 22–24mWh | about 1.5min |
+| 60s WiFi + 20s manifest timeouts | 87s | 259–260mWh | about 16min |
+| timeouts + 300s OTA every cycle | 387s | about 1.15Wh | about 69min |
+
+Measure actual total wake time and panel yield. Real yield depends on conversion losses, sunlight, angle, shading, season, temperature, and the panel curve.
 
 DFRobot specifies FireBeetle VIN for 5V DC or a 5V solar panel. A “6V” panel can exceed 6V at open circuit. Measure open-circuit voltage in bright sun and use it only if it is within the verified input limit for the exact board revision. The GPIO1 divider can measure 6V safely; this does not prove that VIN can accept it.
 
