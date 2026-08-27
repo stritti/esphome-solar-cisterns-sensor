@@ -1,5 +1,7 @@
 # Solar-Powered Water Tank Level Sensor
 
+**English** | [Deutsch](README.de.md)
+
 [![ESPHome](https://esphome.io/_images/logo-text.svg)](https://esphome.io/) [![DFRobot](https://www.dfrobot.com/image/cache/data/attached/image/20230907/20230907104839_959.png)](https://www.dfrobot.com/)
 
 **Ultra-low-power ESPHome project for solar-powered water tank level monitoring using DFRobot FireBeetle 2 ESP32-C6 and A02YYUW ultrasonic sensor.**
