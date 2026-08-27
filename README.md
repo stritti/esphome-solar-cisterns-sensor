@@ -84,8 +84,8 @@ The authoritative assembly reference is [`docs/WIRING.md`](docs/WIRING.md). It c
 |---|---|---|
 | Sensor supply | 3V3 → BC327-40 Emitter; GPIO21 → 4.7kΩ → Base | BC327-40 Collector → A02YYUW VCC; 10kΩ from Base to 3V3 |
 | Sensor ground | GND | A02YYUW GND |
-| UART to sensor | GPIO16 / TX | A02YYUW RX |
-| UART from sensor | GPIO17 / RX | A02YYUW TX |
+| Sensor output mode | Switched sensor VCC | A02YYUW RX; HIGH while powered selects processed output and avoids back-powering when off |
+| UART from sensor | GPIO17 / RX | A02YYUW TX; receive-only MCU connection |
 | Battery | PH2.0 battery connector | Protected 1-cell Li-ion, polarity verified |
 | Solar charging | VIN and GND | Nominal 5V solar panel |
 | Solar measurement | GPIO1 | Divider midpoint: 33kΩ from Solar+, 10kΩ to GND |
@@ -475,7 +475,7 @@ Measure the panel voltage and the GPIO1 voltage with a multimeter before changin
 - **Fix**: Verify `api.encryption.key` matches in both ESPHome and HA
 
 #### **2. Sensor Not Responding**
-- **Check**: UART wiring (RX→TX, TX→RX)
+- **Check**: A02YYUW TX→GPIO17/RX; A02YYUW RX→switched sensor VCC
 - **Check**: Sensor power (GPIO21 must be physically LOW during measurement and HIGH during deep sleep)
 - **Check**: Baud rate (9600 for A02YYUW)
 - **Fix**: Test sensor with separate UART adapter
