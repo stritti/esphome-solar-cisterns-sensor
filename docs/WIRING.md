@@ -69,7 +69,7 @@ Do not omit the 4.7kΩ Base resistor: directly connecting the Base to GPIO21 wou
 | Lower | 10kΩ | Divider midpoint to GND |
 | Midpoint | n/a | GPIO1 |
 
-The scale factor is `(33k + 10k) / 10k = 4.3`. A 5.0V panel produces about 1.16V at GPIO1. The ESPHome ADC therefore uses `attenuation: 12db` and `multiply: 4.3`.
+The scale factor is `(33k + 10k) / 10k = 4.3`. A 5.0V panel produces about 1.16V at GPIO1; 6.0V produces about 1.40V. The ESPHome ADC therefore uses `attenuation: 12db` and `multiply: 4.3`.
 
 GPIO1 measures the panel voltage only. Charging uses the separate VIN connection. Never connect Solar+ directly to GPIO1.
 
@@ -89,8 +89,9 @@ Do not add another divider to GPIO0.
 6. Verify continuity of all GND connections.
 7. Verify that the solar divider is 33kΩ above GPIO1 and 10kΩ below GPIO1.
 8. Verify the PH2.0 polarity against the `+` and `-` labels on the FireBeetle board.
-9. Power from USB first. In debug mode, GPIO21 must be LOW while measuring and HIGH after the sensor is switched off.
+9. Power from USB first. For Variant B in debug mode, GPIO21 must be LOW while measuring and HIGH after the sensor is switched off.
 10. Confirm with a multimeter that GPIO0 and GPIO1 remain within the ESP32-C6 ADC input range.
+11. Before connecting a nominal 6V panel to VIN, measure its open-circuit voltage in bright sun and verify it against the exact board revision's input limit.
 
 ## Primary sources
 
