@@ -4,6 +4,26 @@
 
 ESPHome-Projekt zur solarbetriebenen Füllstandsmessung mit einem DFRobot FireBeetle 2 ESP32-C6 und dem wasserdichten Ultraschallsensor A02YYUW. Das Gerät misst Füllstand, Wasservolumen, Batterie- und Solarspannung und nutzt Deep Sleep für einen niedrigen Energieverbrauch.
 
+## Dokumentationswebsite
+
+Die zweisprachige VitePress-Dokumentation wird nach Änderungen auf `main` unter [stritti.github.io/esphome-solar-cisterns-sensor](https://stritti.github.io/esphome-solar-cisterns-sensor/) veröffentlicht.
+
+Lokale Vorschau:
+
+```bash
+npm ci
+npm run docs:dev
+```
+
+Produktions-Build prüfen:
+
+```bash
+npm run docs:build
+npm run docs:preview
+```
+
+Der Workflow `.github/workflows/deploy-docs.yml` erstellt und veröffentlicht die Website über GitHub Pages. Er verwendet die eingecheckte `package-lock.json`, `npm ci` und den npm-Cache von `actions/setup-node`. Unveränderte Pakete werden dadurch aus dem Cache wiederhergestellt und nicht erneut heruntergeladen. Einmalig muss unter **Settings → Pages → Build and deployment → Source** die Option **GitHub Actions** ausgewählt werden.
+
 ## Funktionen
 
 - Füllstand und Entfernung über A02YYUW mit UART
@@ -33,7 +53,7 @@ ESPHome-Projekt zur solarbetriebenen Füllstandsmessung mit einem DFRobot FireBe
 
 ## Verkabelung
 
-Die verbindliche deutschsprachige Verdrahtungsanleitung steht in [docs/VERKABELUNG.md](docs/VERKABELUNG.md). Die englische Referenz befindet sich in [docs/WIRING.md](docs/WIRING.md).
+Die verbindliche deutschsprachige Verdrahtungsanleitung steht in [docs/de/WIRING.md](docs/de/WIRING.md). Die englische Referenz befindet sich in [docs/WIRING.md](docs/WIRING.md).
 
 ![Verbindlicher Verdrahtungsplan](docs/wiring.svg)
 
@@ -142,7 +162,7 @@ GitHub Actions prüft die Konfiguration und führt für relevante Pull Requests 
 ./scripts/validate-esphome.sh
 ```
 
-Details zu Prüfstufen, festgesetzter ESPHome-Version, CI-Auslösern und lokalen Befehlen stehen in der [ESPHome-Validierung](docs/de/VALIDIERUNG.md).
+Details zu Prüfstufen, festgesetzter ESPHome-Version, CI-Auslösern und lokalen Befehlen stehen in der [ESPHome-Validierung](docs/de/VALIDATION.md).
 
 ## Wichtige Konfigurationswerte
 

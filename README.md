@@ -8,6 +8,26 @@
 
 This project provides precise water level measurement (in liters), battery voltage monitoring, battery charge level, and solar panel voltage tracking - all optimized for solar-powered operation with deep sleep for maximum battery life.
 
+## Documentation website
+
+The bilingual VitePress site is published at [stritti.github.io/esphome-solar-cisterns-sensor](https://stritti.github.io/esphome-solar-cisterns-sensor/) after changes reach `main`.
+
+Local preview:
+
+```bash
+npm ci
+npm run docs:dev
+```
+
+Production check:
+
+```bash
+npm run docs:build
+npm run docs:preview
+```
+
+The workflow `.github/workflows/deploy-docs.yml` builds and deploys through GitHub Pages. It uses the committed `package-lock.json`, `npm ci`, and the npm cache provided by `actions/setup-node`; unchanged packages are restored from the cache instead of downloaded again. The repository setting **Settings → Pages → Build and deployment → Source** must be set to **GitHub Actions** once.
+
 ---
 
 ## ✨ Features

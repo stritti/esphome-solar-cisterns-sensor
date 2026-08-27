@@ -4,3 +4,6 @@
 /.esphome/
 /secrets.yaml
 /secrets.yaml.example
+node_modules/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
