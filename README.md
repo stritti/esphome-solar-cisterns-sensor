@@ -94,7 +94,7 @@ The authoritative assembly reference is [`docs/WIRING.md`](docs/WIRING.md). It c
 
 ### Optional BC327-40: energy saving
 
-DFRobot specifies up to 8mA average current for the A02YYUW. The calculation below uses the default 30-minute interval and the configured 7-second sensor-on time per cycle.
+DFRobot specifies up to 8mA average current for the A02YYUW. The calculation below uses the default 30-minute interval and the configured 7-second sensor-on time per cycle. The firmware now switches the sensor off immediately after this measurement period, before WiFi association, update checks, and any OTA wake window.
 
 | Configuration | Sensor-on time per day | Consumption on 3.3V rail | Energy per day |
 |---|---:|---:|---:|
