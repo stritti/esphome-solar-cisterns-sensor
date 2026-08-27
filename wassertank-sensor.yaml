@@ -121,6 +121,9 @@ esphome:
       
       # 3. Wait for data processing and transmission
       - delay: ${MEASUREMENT_PROCESSING_TIME}s
+
+      # 3a. Measurement is complete: remove sensor power before WiFi/OTA waits
+      - switch.turn_off: sensor_power
       
       # 3b. Force-read battery & solar so the power checks below see fresh values
       # (ADC default update_interval is 60s - without this, has_state() may be false)
@@ -201,7 +204,7 @@ esphome:
             delay(${OTA_WAKE_WINDOW} * 1000);
           }
       
-      # 7. Turn off sensor to save power
+      # 7. Safety: ensure sensor remains off before deep sleep
       - switch.turn_off: sensor_power
       
       # 8. Disable WiFi for deep sleep
