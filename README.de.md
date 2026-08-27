@@ -53,7 +53,7 @@ Der Workflow `.github/workflows/deploy-docs.yml` erstellt und veröffentlicht di
 
 ## Verkabelung
 
-Die verbindliche deutschsprachige Verdrahtungsanleitung steht in [docs/VERKABELUNG.md](docs/VERKABELUNG.md). Die englische Referenz befindet sich in [docs/WIRING.md](docs/WIRING.md).
+Die verbindliche deutschsprachige Verdrahtungsanleitung steht in [docs/de/WIRING.md](docs/de/WIRING.md). Die englische Referenz befindet sich in [docs/WIRING.md](docs/WIRING.md).
 
 ![Verbindlicher Verdrahtungsplan](docs/wiring.svg)
 

@@ -6,7 +6,7 @@ ESPHome project for solar-powered water tank level sensing using DFRobot FireBee
 ## Key Files
 - `wassertank-sensor.yaml` — main ESPHome configuration
 - `README.md` and `README.de.md` — English and German project overview and setup
-- `docs/WIRING.md`, `docs/VERKABELUNG.md`, and `docs/wiring.svg` — English/German authoritative hardware wiring reference
+- `docs/WIRING.md`, `docs/de/WIRING.md`, and `docs/wiring.svg` — English/German authoritative hardware wiring reference
 - `.haft/` — Haft project metadata (do not edit)
 
 ## Critical Constraints

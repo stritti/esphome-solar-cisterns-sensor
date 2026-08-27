@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: Verkabelung
-      link: /VERKABELUNG
+      link: /de/WIRING
     - theme: alt
       text: English documentation
       link: /
@@ -28,7 +28,7 @@ features:
 ## Einstieg
 
 1. Direkte Sensorversorgung oder optionales BC327-40-Power-Gating auswählen.
-2. Die [verbindliche Verdrahtungsreferenz](/VERKABELUNG) umsetzen.
+2. Die [verbindliche Verdrahtungsreferenz](/de/WIRING) umsetzen.
 3. `secrets.yaml.example` nach `secrets.yaml` kopieren.
 4. ESPHome-Konfiguration prüfen und übertragen.
 
@@ -46,4 +46,4 @@ DFRobot spezifiziert einen 5-V-Gleichspannungs- beziehungsweise 5-V-Solareingang
 
 Sieben Sekunden bezeichnen das geschaltete Sensorfenster, nicht zwingend die gesamte Wachzeit des Controllers. Die Dokumentation enthält eine Untergrenze sowie Netzwerk-Timeout- und OTA-Szenarien. Für eine belastbare Anlagenbewertung muss die reale Wachzeit gemessen werden.
 
-[Verkabelung und Verbrauchsrechnung lesen](/VERKABELUNG)
+[Verkabelung und Verbrauchsrechnung lesen](/de/WIRING)
