@@ -1,5 +1,7 @@
 # Wiring reference
 
+**English** | [Deutsch](VERKABELUNG.md)
+
 This file is the single authoritative wiring reference for the project. The firmware pin definitions in `wassertank-sensor.yaml` must match this document.
 
 ![Complete wiring diagram](wiring.svg)
