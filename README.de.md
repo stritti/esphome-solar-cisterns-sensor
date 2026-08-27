@@ -98,8 +98,8 @@ Der 33-kΩ-/10-kΩ-Spannungsteiler kann 6 V an GPIO1 messen. Das bedeutet nicht,
 
 | Funktion | FireBeetle | Gegenstelle |
 |---|---|---|
-| UART senden | GPIO16 / TX | A02YYUW RX |
-| UART empfangen | GPIO17 / RX | A02YYUW TX |
+| Sensorausgabemodus | geschaltete Sensorversorgung | A02YYUW RX; HIGH bei eingeschaltetem Sensor wählt geglättete Ausgabe |
+| UART empfangen | GPIO17 / RX | A02YYUW TX; der Controller empfängt nur |
 | Masse | GND | A02YYUW GND und Solar GND |
 | Batterie | PH2.0 | geschützte Li-Ion-Zelle, Polarität prüfen |
 | Solar laden | VIN | laut Hersteller 5-V-Solarpanel |
@@ -201,12 +201,13 @@ Die erste Installation muss per USB oder regulärem ESPHome-Upload erfolgen. Aut
 1. USB, Batterie und Solarpanel trennen.
 2. Variante A oder B eindeutig wählen.
 3. Batteriepolarität am PH2.0-Anschluss prüfen.
-4. UART über Kreuz anschließen: GPIO16 TX zu Sensor RX, Sensor TX zu GPIO17 RX.
-5. Bei Variante B Emitter, Basis und Collector anhand des Herstellerdatenblatts prüfen.
-6. Bei Variante B 4,7 kΩ zwischen GPIO21 und Basis sowie 10 kΩ zwischen Basis und 3V3 prüfen.
-7. Solarteiler prüfen: 33 kΩ von Solar+ zu GPIO1, 10 kΩ von GPIO1 zu GND.
-8. 6-V-Panel erst nach Messung und Bewertung seiner Leerlaufspannung an VIN anschließen.
-9. Zuerst über USB testen.
+4. A02YYUW TX mit GPIO17/RX verbinden. A02YYUW RX an die geschaltete Sensorversorgung anschließen, nicht an GPIO16.
+5. Diese RX-Verbindung verhindert eine Rückspeisung des ausgeschalteten Sensors durch einen HIGH-Pegel des Controllers.
+6. Bei Variante B Emitter, Basis und Collector anhand des Herstellerdatenblatts prüfen.
+7. Bei Variante B 4,7 kΩ zwischen GPIO21 und Basis sowie 10 kΩ zwischen Basis und 3V3 prüfen.
+8. Solarteiler prüfen: 33 kΩ von Solar+ zu GPIO1, 10 kΩ von GPIO1 zu GND.
+9. 6-V-Panel erst nach Messung und Bewertung seiner Leerlaufspannung an VIN anschließen.
+10. Zuerst über USB testen.
 
 ## Quellen
 
