@@ -27,8 +27,8 @@ Die Anschlüsse 1 bis 4 gelten nur für Variante B. Alle weiteren Anschlüsse ge
 | 3 | 10 kΩ | BC327-40 Basis ↔ 3V3 | Pull-up hält den Sensor bei hochohmigem GPIO ausgeschaltet |
 | 4 | BC327-40 Collector | A02YYUW VCC | geschaltete 3,3-V-Sensorversorgung |
 | 5 | FireBeetle GND | A02YYUW GND | gemeinsame Masse |
-| 6 | FireBeetle GPIO16 / TX | A02YYUW RX | UART-Senderichtung und Auswahl des Sensorausgabemodus |
-| 7 | A02YYUW TX | FireBeetle GPIO17 / RX | UART-Abstandsdaten mit 9600 Baud |
+| 6 | geschaltete Sensorversorgung | A02YYUW RX | HIGH bei eingeschaltetem Sensor wählt geglättete Ausgabe; fällt beim Abschalten zusammen mit VCC ab |
+| 7 | A02YYUW TX | FireBeetle GPIO17 / RX | UART-Abstandsdaten mit 9600 Baud; Controller empfängt nur |
 | 8 | geschützte einzelne Li-Ion-Zelle | FireBeetle PH2.0 | Hauptbatterie, Polarität anhand der Platinenbeschriftung prüfen |
 | 9 | Solarpanel Plus | FireBeetle VIN | Eingang der integrierten Solar-Ladeelektronik |
 | 10 | Solarpanel GND | FireBeetle GND | Lade- und Messreferenz |
@@ -101,12 +101,13 @@ Keinen zusätzlichen Spannungsteiler an GPIO0 anschließen.
 4. Bei Variante B 4,7 kΩ zwischen GPIO21 und Basis sowie 10 kΩ zwischen Basis und 3V3 prüfen.
 5. Bei Variante B die Pinreihenfolge des BC327-40 anhand des Herstellerdatenblatts prüfen.
 6. Durchgängige gemeinsame Masse kontrollieren.
-7. UART-Kreuzung prüfen: GPIO16 TX → Sensor RX; Sensor TX → GPIO17 RX.
-8. Solarteiler prüfen: 33 kΩ oberhalb und 10 kΩ unterhalb von GPIO1.
-9. PH2.0-Polarität anhand der Platinenbeschriftung prüfen.
-10. Zuerst über USB testen.
-11. Bei Variante B muss GPIO21 während der Messung LOW und danach HIGH sein.
-12. Vor Anschluss eines 6-V-Panels dessen Leerlaufspannung bei kräftiger Sonne messen.
+7. A02YYUW TX → GPIO17/RX prüfen. A02YYUW RX muss an der geschalteten Sensorversorgung liegen und darf nicht von GPIO16 angesteuert werden.
+8. Dadurch fällt RX beim Abschalten gemeinsam mit VCC ab und kann den Sensor nicht rückspeisen.
+9. Solarteiler prüfen: 33 kΩ oberhalb und 10 kΩ unterhalb von GPIO1.
+10. PH2.0-Polarität anhand der Platinenbeschriftung prüfen.
+11. Zuerst über USB testen.
+12. Bei Variante B muss GPIO21 während der Messung LOW und danach HIGH sein.
+13. Vor Anschluss eines 6-V-Panels dessen Leerlaufspannung bei kräftiger Sonne messen.
 
 ## Quellen
 
