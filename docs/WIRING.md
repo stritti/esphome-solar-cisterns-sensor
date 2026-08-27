@@ -35,7 +35,7 @@ Connections 1–4 apply only to Variant B. All remaining connections apply to bo
 
 ## Energy saving from the optional BC327-40
 
-DFRobot specifies an A02YYUW average current of up to 8mA. With the default 30-minute interval and 7-second on-time, there are 48 cycles and 336 powered seconds per day.
+DFRobot specifies an A02YYUW average current of up to 8mA. With the default 30-minute interval and 7-second on-time, there are 48 cycles and 336 powered seconds per day. The firmware switches `sensor_power` off immediately after the 5-second warm-up and 2-second processing period, before WiFi association, update checks, or an OTA wake window.
 
 | Configuration | Calculation | 3.3V-rail consumption | Energy per day |
 |---|---|---:|---:|
