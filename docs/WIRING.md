@@ -4,7 +4,19 @@ This file is the single authoritative wiring reference for the project. The firm
 
 ![Complete wiring diagram](wiring.svg)
 
+## Choose one sensor-supply variant
+
+### Variant A: simplest build, without BC327-40
+
+Connect A02YYUW VCC directly to FireBeetle 3V3. Leave GPIO21 unconnected. The sensor works normally, but remains powered during deep sleep and can draw up to 8mA average continuously.
+
+### Variant B: low-power build, with BC327-40
+
+Use connections 1–4 below. This is recommended for battery and solar operation because the sensor is powered only during measurement. The diagram shows this variant.
+
 ## Connections
+
+Connections 1–4 apply only to Variant B. All remaining connections apply to both variants.
 
 | No. | From | To | Purpose |
 |---:|---|---|---|
@@ -20,6 +32,22 @@ This file is the single authoritative wiring reference for the project. The firm
 | 10 | Solar panel GND | FireBeetle GND | Charging and measurement reference |
 | 11 | Solar panel + | 33kΩ → divider midpoint | Upper resistor of the solar monitor |
 | 12 | Divider midpoint | FireBeetle GPIO1 and 10kΩ → GND | Solar ADC input and lower resistor |
+
+## Energy saving from the optional BC327-40
+
+DFRobot specifies an A02YYUW average current of up to 8mA. With the default 30-minute interval and 7-second on-time, there are 48 cycles and 336 powered seconds per day.
+
+| Configuration | Calculation | 3.3V-rail consumption | Energy per day |
+|---|---|---:|---:|
+| Without power gating | 8mA × 24h | up to 192mAh/day | up to 0.634Wh/day |
+| With BC327-40 | (8mA + about 0.55mA Base current) × 336s | about 0.80mAh/day | about 0.0026Wh/day |
+| **Saving** | | **about 191mAh/day** | **about 0.631Wh/day (99.6%)** |
+
+The Base-current estimate is `(3.3V - 0.7V) / 4.7kΩ ≈ 0.55mA`. The calculation covers the sensor switching circuit only. Board consumption, WiFi, charging and regulator losses are separate.
+
+For a 6V/1W panel, 0.631Wh corresponds to about 38 minutes at the ideal rated 1W output, or roughly 45–55 minutes after conversion losses. Real yield depends on sunlight, angle, shading, temperature, and the panel curve.
+
+DFRobot specifies FireBeetle VIN for 5V DC or a 5V solar panel. A “6V” panel can exceed 6V at open circuit. Measure open-circuit voltage in bright sun and use it only if it is within the verified input limit for the exact board revision. The GPIO1 divider can measure 6V safely; this does not prove that VIN can accept it.
 
 ## Transistor logic
 
@@ -54,14 +82,15 @@ Do not add another divider to GPIO0.
 ## Checks before power-up
 
 1. Disconnect USB, battery, and solar panel.
-2. Verify that the BC327-40 Emitter connects to 3V3 and Collector connects to sensor VCC.
-3. Verify 4.7kΩ between GPIO21 and Base, and 10kΩ between Base and 3V3. There must be no Base-to-GND pull-down.
-4. Verify the BC327-40 pin order against the datasheet for the purchased manufacturer.
-5. Verify continuity of all GND connections.
-6. Verify that the solar divider is 33kΩ above GPIO1 and 10kΩ below GPIO1.
-7. Verify the PH2.0 polarity against the `+` and `-` labels on the FireBeetle board.
-8. Power from USB first. In debug mode, GPIO21 must be LOW while measuring and HIGH after the sensor is switched off.
-9. Confirm with a multimeter that GPIO0 and GPIO1 remain within the ESP32-C6 ADC input range.
+2. Decide on Variant A or B. Do not combine direct 3V3 sensor power with the switched Collector output.
+3. For Variant B, verify that the BC327-40 Emitter connects to 3V3 and Collector connects to sensor VCC.
+4. For Variant B, verify 4.7kΩ between GPIO21 and Base, and 10kΩ between Base and 3V3. There must be no Base-to-GND pull-down.
+5. For Variant B, verify the BC327-40 pin order against the datasheet for the purchased manufacturer.
+6. Verify continuity of all GND connections.
+7. Verify that the solar divider is 33kΩ above GPIO1 and 10kΩ below GPIO1.
+8. Verify the PH2.0 polarity against the `+` and `-` labels on the FireBeetle board.
+9. Power from USB first. In debug mode, GPIO21 must be LOW while measuring and HIGH after the sensor is switched off.
+10. Confirm with a multimeter that GPIO0 and GPIO1 remain within the ESP32-C6 ADC input range.
 
 ## Primary sources
 
