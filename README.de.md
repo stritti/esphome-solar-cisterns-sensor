@@ -162,7 +162,7 @@ GitHub Actions prüft die Konfiguration und führt für relevante Pull Requests 
 ./scripts/validate-esphome.sh
 ```
 
-Details zu Prüfstufen, festgesetzter ESPHome-Version, CI-Auslösern und lokalen Befehlen stehen in der [ESPHome-Validierung](docs/de/VALIDIERUNG.md).
+Details zu Prüfstufen, festgesetzter ESPHome-Version, CI-Auslösern und lokalen Befehlen stehen in der [ESPHome-Validierung](docs/de/VALIDATION.md).
 
 ## Wichtige Konfigurationswerte
 
