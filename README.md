@@ -356,17 +356,19 @@ substitutions:
 
 ## Power consumption and 1W solar-panel estimate
 
-The following estimate uses the configured 30-minute interval, 7 seconds active time per cycle, and the existing approximately 60mA active-current assumption. DFRobot specifies 16μA deep-sleep current for FireBeetle revision 1.0 and 36μA for revision 1.2.
+The 7-second value describes the sensor power window only. The FireBeetle remains awake for WiFi association, manifest polling, and optional OTA handling. The firmware permits up to 60 seconds for WiFi and another 20 seconds for the manifest result. An OTA wake window can add 300 seconds.
 
-| Contribution | Daily consumption |
-|---|---:|
-| 48 active phases × 7s × approximately 60mA | approximately 5.60mAh |
-| Remaining 23.91h at 16–36μA | approximately 0.38–0.86mAh |
-| **Estimated total with BC327-40** | **approximately 6.0–6.5mAh/day** |
+The estimates below assume 48 cycles/day, approximately 60mA while awake, and DFRobot's 16μA deep-sleep current for board revision 1.0 or 36μA for revision 1.2.
 
-At a nominal battery voltage of 3.7V this is approximately 22–24mWh/day. This is an engineering estimate, not a guaranteed measurement. Slow WiFi association, poor signal, failed connections, OTA windows, battery losses, low temperature, and regulator losses increase consumption.
+| Scenario | Awake time per cycle | Estimated daily consumption | Energy at 3.7V |
+|---|---:|---:|---:|
+| Theoretical lower bound: only sensor window | 7s | approximately 6.0–6.5mAh | approximately 22–24mWh |
+| WiFi and manifest reach both timeouts, no OTA window | 87s | approximately 70.0–70.4mAh | approximately 259–260mWh |
+| Both timeouts plus a 300s OTA window on every cycle | 387s | approximately 309.9–310.3mAh | approximately 1.15Wh |
 
-Without BC327-40 power gating, the continuously powered A02YYUW adds up to approximately 192mAh or 0.634Wh per day on the 3.3V rail. That would dominate the complete system load.
+The lower bound is not a prediction of normal operation because every production wake attempts network and update work. Actual consumption depends on measured total wake time and how often OTA windows occur. Slow association, unavailable services, retries, poor signal, battery and regulator losses, and low temperature increase battery demand.
+
+The BC327-40 sensor-saving calculation remains independent of these network waits: the firmware switches A02YYUW power off after 7 seconds. Without power gating, the continuously powered sensor adds up to approximately 192mAh or 0.634Wh per day on the 3.3V rail.
 
 ### 6V / 1W panel
 
