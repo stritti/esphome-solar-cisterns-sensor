@@ -235,7 +235,8 @@ esp32:
 # ============================================================================
 deep_sleep:
   id: deep_sleep_control
-  run_duration: ${ULTRASONIC_WARMUP_TIME}s
+  # No component-level run_duration: on_boot performs measurement, update checks,
+  # and then enters deep sleep explicitly after all work is complete.
 
 # ============================================================================
 # LOGGER CONFIGURATION
