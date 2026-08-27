@@ -9,7 +9,8 @@ substitutions:
 # ============================================================================
 # HARDWARE CONFIGURATION (FireBeetle 2 ESP32-C6)
 # ============================================================================
-# Sensor power control (BC327-40 PNP transistor; 4.7kΩ GPIO-to-Base, 10kΩ Base-to-3V3)
+# Optional sensor power control (BC327-40 PNP; 4.7kΩ GPIO-to-Base, 10kΩ Base-to-3V3)
+# Without power gating: connect sensor VCC directly to 3V3 and leave this GPIO unconnected.
 # Safe GPIOs: GPIO1, GPIO2, GPIO3, GPIO20, GPIO21, GPIO22, GPIO23
 # GPIO16/17 are reserved for UART!
   SENSOR_POWER_PIN: "GPIO21"
@@ -300,7 +301,7 @@ uart:
     tx_pin: 16
 
 # ============================================================================
-# POWER CONTROL FOR SENSOR (BC327-40 PNP HIGH-SIDE SWITCH)
+# OPTIONAL POWER CONTROL FOR SENSOR (BC327-40 PNP HIGH-SIDE SWITCH)
 # ============================================================================
 switch:
   - platform: gpio
