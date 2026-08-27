@@ -69,19 +69,21 @@ Annahmen: 48 Messungen täglich, sieben Sekunden Einschaltzeit, 8 mA Sensorstrom
 
 ## Gesamtverbrauch und 1-W-Solarpanel
 
-Die folgende Abschätzung verwendet ungefähr 60 mA während der sieben Sekunden langen aktiven Phase. DFRobot nennt für den FireBeetle 16 µA Deep-Sleep-Strom bei Revision 1.0 und 36 µA bei Revision 1.2.
+Die sieben Sekunden beschreiben ausschließlich die Einschaltzeit des Sensors. Der FireBeetle bleibt danach für WLAN-Verbindung, Manifestprüfung und gegebenenfalls OTA wach. Die Firmware wartet höchstens 60 Sekunden auf WLAN und weitere 20 Sekunden auf das Manifest. Ein OTA-Fenster kann zusätzlich 300 Sekunden dauern.
 
-| Anteil | täglicher Verbrauch |
-|---|---:|
-| 48 aktive Phasen × 7 s × ungefähr 60 mA | ungefähr 5,60 mAh |
-| restliche 23,91 Stunden mit 16 bis 36 µA | ungefähr 0,38 bis 0,86 mAh |
-| **Gesamt mit BC327-40** | **ungefähr 6,0 bis 6,5 mAh pro Tag** |
+Die folgenden Abschätzungen verwenden 48 Zyklen täglich, ungefähr 60 mA während der Wachzeit sowie 16 µA Deep-Sleep-Strom bei FireBeetle-Revision 1.0 beziehungsweise 36 µA bei Revision 1.2.
 
-Bei 3,7 V Batteriespannung entsprechen 6,0 bis 6,5 mAh ungefähr 22 bis 24 mWh täglich. Schlechte WLAN-Verbindung, wiederholte Verbindungsversuche, OTA-Fenster, Kälte, Ladeverluste und Reglerverluste erhöhen den realen Verbrauch.
+| Szenario | Wachzeit je Zyklus | geschätzter Tagesverbrauch | Energie bei 3,7 V |
+|---|---:|---:|---:|
+| theoretische Untergrenze: nur Sensorfenster | 7 s | ungefähr 6,0–6,5 mAh | ungefähr 22–24 mWh |
+| WLAN und Manifest erreichen beide Timeouts, kein OTA-Fenster | 87 s | ungefähr 70,0–70,4 mAh | ungefähr 259–260 mWh |
+| beide Timeouts und 300 s OTA bei jedem Zyklus | 387 s | ungefähr 309,9–310,3 mAh | ungefähr 1,15 Wh |
 
-Ein Panel mit 1 W liefert theoretisch 1 Wh je Stunde bei seinem Nennarbeitspunkt. Für 22 bis 24 mWh wären ideal etwa 1,5 Minuten volle Nennleistung nötig. Unter realen Bedingungen sind mehrere Minuten kräftige Sonne anzusetzen. Energetisch ist ein 1-W-Panel für diesen Messzyklus ausreichend.
+Die Untergrenze ist keine Prognose für den Normalbetrieb, weil jeder Produktionszyklus Netzwerk- und Update-Arbeit versucht. Der reale Verbrauch hängt von der gemessenen gesamten Wachzeit und der Häufigkeit der OTA-Fenster ab. Langsame oder fehlgeschlagene Verbindungen, Wiederholungen, schlechtes Funksignal, Batterie- und Reglerverluste sowie Kälte erhöhen den Bedarf.
 
-Ohne BC327-40 benötigt allein der dauerhaft versorgte Sensor bis zu 0,634 Wh täglich. Das entspricht bei einem 1-W-Panel 38 Minuten idealer Nennleistung oder ungefähr 45 bis 55 Minuten unter Berücksichtigung typischer Wandlungsverluste.
+Die Einsparung des BC327-40 bleibt davon unabhängig: Die Firmware schaltet den A02YYUW nach sieben Sekunden aus. Ohne Power-Gating benötigt der dauerhaft versorgte Sensor zusätzlich bis zu 192 mAh beziehungsweise 0,634 Wh täglich.
+
+Ein 1-W-Panel benötigt für die drei Rechengrenzen ideal ungefähr 1,5 Minuten, 16 Minuten beziehungsweise 69 Minuten volle Nennleistung. Lade-, Regler-, Temperatur-, Ausrichtungs- und Schwachlichtverluste verlängern diese Zeiten. Die konkrete Anlage sollte anhand der real gemessenen Wachzeit und des tatsächlichen Tagesertrags bewertet werden.
 
 ### Sicherheitshinweis zum 6-V-Panel
 
