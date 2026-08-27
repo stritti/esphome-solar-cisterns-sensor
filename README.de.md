@@ -134,6 +134,16 @@ esphome config wassertank-sensor.yaml
 esphome run wassertank-sensor.yaml
 ```
 
+### Automatische Validierung
+
+GitHub Actions prüft die Konfiguration und führt für relevante Pull Requests und Pushes auf `main` eine vollständige Firmware-Kompilierung aus. Lokal und in CI wird dasselbe Skript verwendet:
+
+```bash
+./scripts/validate-esphome.sh
+```
+
+Details zu Prüfstufen, festgesetzter ESPHome-Version, CI-Auslösern und lokalen Befehlen stehen in der [ESPHome-Validierung](docs/de/VALIDIERUNG.md).
+
 ## Wichtige Konfigurationswerte
 
 | Variable | Bedeutung | Standard |

@@ -234,6 +234,16 @@ substitutions:
    esphome logs wassertank-sensor.yaml
    ```
 
+### Automated validation
+
+GitHub Actions validates the configuration and performs a complete firmware compile for relevant pull requests and pushes to `main`. Local and CI runs use the same entry point:
+
+```bash
+./scripts/validate-esphome.sh
+```
+
+See [ESPHome validation](docs/VALIDATION.md) for validation levels, the pinned ESPHome version, CI triggers and local commands.
+
 ---
 
 ## 🏠 Home Assistant Integration

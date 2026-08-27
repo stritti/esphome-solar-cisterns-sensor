@@ -1,0 +1,62 @@
+name: Validate ESPHome
+
+on:
+  pull_request:
+    paths:
+      - 'wassertank-sensor.yaml'
+      - 'secrets.yaml.example'
+      - 'scripts/validate-esphome.sh'
+      - '.github/workflows/validate-esphome.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'wassertank-sensor.yaml'
+      - 'secrets.yaml.example'
+      - 'scripts/validate-esphome.sh'
+      - '.github/workflows/validate-esphome.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: esphome-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ESPHOME_VERSION: '2026.8.0'
+
+jobs:
+  validate-and-compile:
+    name: Validate and compile firmware
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Cache ESPHome toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            .esphome
+            ~/.cache/esphome
+            ~/.platformio
+          key: esphome-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-${{ hashFiles('wassertank-sensor.yaml') }}
+          restore-keys: |
+            esphome-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-
+
+      - name: Install ESPHome
+        run: python -m pip install "esphome==${ESPHOME_VERSION}"
+
+      - name: Create non-secret CI configuration
+        run: cp secrets.yaml.example secrets.yaml
+
+      - name: Validate and compile
+        run: ./scripts/validate-esphome.sh

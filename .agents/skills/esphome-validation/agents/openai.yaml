@@ -1,0 +1,3 @@
+interface:
+  display_name: "ESPHome Validation"
+  short_description: "Validate and compile this ESPHome configuration"
