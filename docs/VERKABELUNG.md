@@ -61,7 +61,15 @@ Die Rechnung erfasst Sensor und Basisstrom. FireBeetle, WLAN, Ladeelektronik, Wa
 
 ## 6-V-/1-W-Solarpanel
 
-Ein 1-W-Panel ist energetisch für den dokumentierten Messzyklus ausreichend. Mit BC327-40 liegt der abgeschätzte Gesamtbedarf bei ungefähr 22 bis 24 mWh täglich. Ohne Abschaltung benötigt allein der A02YYUW bis zu 0,634 Wh täglich.
+Die Einsparung von 0,631 Wh betrifft nur den Sensorzweig. Der Controllerverbrauch hängt von seiner gesamten Wachzeit ab:
+
+| Controller-Szenario | Wachzeit je Zyklus | ungefähre Energie pro Tag bei 3,7 V | ideale Zeit eines 1-W-Panels |
+|---|---:|---:|---:|
+| theoretische Untergrenze | 7 s | 22–24 mWh | etwa 1,5 min |
+| 60 s WLAN- und 20 s Manifest-Timeout | 87 s | 259–260 mWh | etwa 16 min |
+| Timeouts und 300 s OTA bei jedem Zyklus | 387 s | etwa 1,15 Wh | etwa 69 min |
+
+Maßgeblich sind die real gemessene gesamte Wachzeit und der tatsächliche Panelertrag. Ohne Abschaltung benötigt allein der A02YYUW bis zu 0,634 Wh täglich.
 
 DFRobot spezifiziert VIN für 5 V Gleichspannung oder ein 5-V-Solarpanel. Ein nominales 6-V-Panel kann im Leerlauf mehr als 6 V erzeugen. Die Leerlaufspannung muss bei kräftiger Sonne gemessen und mit der zulässigen Eingangsspannung der konkreten FireBeetle-Revision verglichen werden.
 
