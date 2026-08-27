@@ -5,13 +5,14 @@ ESPHome project for solar-powered water tank level sensing using DFRobot FireBee
 
 ## Key Files
 - `wassertank-sensor.yaml` — main ESPHome configuration
-- `README.md` — hardware setup and wiring details
+- `README.md` and `README.de.md` — English and German project overview and setup
+- `docs/WIRING.md`, `docs/VERKABELUNG.md`, and `docs/wiring.svg` — English/German authoritative hardware wiring reference
 - `.haft/` — Haft project metadata (do not edit)
 
 ## Critical Constraints
-- **GPIO16 and GPIO17 are reserved** for UART (ultrasonic sensor) — never reuse
-- **SENSOR_POWER_PIN default GPIO21** — if using transistor/MOSFET, verify GPIO can drive gate
-- **BATTERY_ADC_PIN default GPIO0** — uses ESP32-C6 internal 1.1V reference with `attenuation: 0db`
+- **GPIO17 is reserved** for UART RX from the ultrasonic sensor. GPIO16 is unused. A02YYUW RX is tied to switched sensor VCC, never to an MCU output, to prevent back-powering while VCC is off
+- **SENSOR_POWER_PIN default GPIO21** — BC327-40 Base connects to GPIO21 through 4.7kΩ and uses a 10kΩ pull-up to 3V3; ESPHome pin is inverted (physical LOW = sensor ON)
+- **BATTERY_ADC_PIN default GPIO0** — FireBeetle on-board divider requires `attenuation: 12db` and `multiply: 2.0`
 - **TANK_TYPE must match dimensions**: ROUND needs TANK_RADIUS, RECTANGLE needs TANK_LENGTH + TANK_WIDTH
 
 ## Making Changes
