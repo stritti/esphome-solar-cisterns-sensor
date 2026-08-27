@@ -513,7 +513,7 @@ Measure the panel voltage and the GPIO1 voltage with a multimeter before changin
 - **Fix**: Charge battery or adjust threshold
 
 #### **7. High Power Consumption**
-- **Check**: Sensor power control (MOSFET)
+- **Check**: Sensor power control (BC327-40)
 - **Check**: WiFi power save mode (should be HIGH)
 - **Check**: Logger disabled in production (DEBUG_MODE: "NONE")
 - **Check**: CPU frequency (should be 80MHZ)
