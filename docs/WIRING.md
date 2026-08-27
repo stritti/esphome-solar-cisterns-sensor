@@ -8,10 +8,10 @@ This file is the single authoritative wiring reference for the project. The firm
 
 | No. | From | To | Purpose |
 |---:|---|---|---|
-| 1 | FireBeetle 3V3 | IRLML6401 Source | Supply for the switched sensor rail |
-| 2 | FireBeetle GPIO21 | IRLML6401 Gate | Active-low sensor control |
-| 3 | 10kΩ resistor | IRLML6401 Gate ↔ 3V3 | Pull-up; keeps the sensor off while the GPIO is high-impedance |
-| 4 | IRLML6401 Drain | A02YYUW VCC | Switched 3.3V sensor supply |
+| 1 | FireBeetle 3V3 | BC327-40 Emitter | Supply for the switched sensor rail |
+| 2 | FireBeetle GPIO21 | 4.7kΩ resistor → BC327-40 Base | Limits the Base current; active-low sensor control |
+| 3 | 10kΩ resistor | BC327-40 Base ↔ 3V3 | Pull-up; keeps the sensor off while the GPIO is high-impedance |
+| 4 | BC327-40 Collector | A02YYUW VCC | Switched 3.3V sensor supply |
 | 5 | FireBeetle GND | A02YYUW GND | Common ground |
 | 6 | FireBeetle GPIO16 / TX | A02YYUW RX | UART transmit and sensor output-mode selection |
 | 7 | A02YYUW TX | FireBeetle GPIO17 / RX | UART distance data at 9600 baud |
@@ -21,17 +21,17 @@ This file is the single authoritative wiring reference for the project. The firm
 | 11 | Solar panel + | 33kΩ → divider midpoint | Upper resistor of the solar monitor |
 | 12 | Divider midpoint | FireBeetle GPIO1 and 10kΩ → GND | Solar ADC input and lower resistor |
 
-## MOSFET logic
+## Transistor logic
 
-The IRLML6401 is a P-channel MOSFET used as a high-side switch.
+The BC327-40 is a PNP transistor used as a high-side switch. Its TO-92 package is suitable for breadboards and through-hole prototyping. Verify the Emitter, Base, and Collector pin order against the datasheet for the exact manufacturer before wiring.
 
-| ESPHome switch state | Physical GPIO21 | Gate relative to Source | Sensor |
+| ESPHome switch state | Physical GPIO21 | BC327-40 Base | Sensor |
 |---|---:|---|---|
-| ON | LOW | Approximately -3.3V | Powered |
-| OFF | HIGH | Approximately 0V | Off |
-| Boot or deep sleep, GPIO high-impedance | Held HIGH by 10kΩ pull-up | Approximately 0V | Off |
+| ON | LOW | Base current through 4.7kΩ | Powered |
+| OFF | HIGH | Approximately equal to Emitter voltage | Off |
+| Boot or deep sleep, GPIO high-impedance | Held at 3V3 by 10kΩ pull-up | Approximately equal to Emitter voltage | Off |
 
-A pull-down on the Gate would turn the P-channel MOSFET on during boot and deep sleep. It must not be used.
+Do not omit the 4.7kΩ Base resistor: directly connecting the Base to GPIO21 would allow excessive GPIO and Base current. A pull-down on the Base would turn the PNP transistor on during boot and deep sleep and must not be used.
 
 ## Solar divider
 
@@ -54,13 +54,14 @@ Do not add another divider to GPIO0.
 ## Checks before power-up
 
 1. Disconnect USB, battery, and solar panel.
-2. Verify that IRLML6401 Source connects to 3V3 and Drain connects to sensor VCC.
-3. Measure 10kΩ between Gate and 3V3. There must be no Gate-to-GND pull-down.
-4. Verify continuity of all GND connections.
-5. Verify that the solar divider is 33kΩ above GPIO1 and 10kΩ below GPIO1.
-6. Verify the PH2.0 polarity against the `+` and `-` labels on the FireBeetle board.
-7. Power from USB first. In debug mode, GPIO21 must be LOW while measuring and HIGH after the sensor is switched off.
-8. Confirm with a multimeter that GPIO0 and GPIO1 remain within the ESP32-C6 ADC input range.
+2. Verify that the BC327-40 Emitter connects to 3V3 and Collector connects to sensor VCC.
+3. Verify 4.7kΩ between GPIO21 and Base, and 10kΩ between Base and 3V3. There must be no Base-to-GND pull-down.
+4. Verify the BC327-40 pin order against the datasheet for the purchased manufacturer.
+5. Verify continuity of all GND connections.
+6. Verify that the solar divider is 33kΩ above GPIO1 and 10kΩ below GPIO1.
+7. Verify the PH2.0 polarity against the `+` and `-` labels on the FireBeetle board.
+8. Power from USB first. In debug mode, GPIO21 must be LOW while measuring and HIGH after the sensor is switched off.
+9. Confirm with a multimeter that GPIO0 and GPIO1 remain within the ESP32-C6 ADC input range.
 
 ## Primary sources
 
@@ -68,4 +69,4 @@ Do not add another divider to GPIO0.
 - [DFRobot FireBeetle battery-voltage example](https://wiki.dfrobot.com/dfr1075/docs/17359)
 - [DFRobot A02YYUW documentation](https://wiki.dfrobot.com/sen0311/)
 - [ESPHome ADC sensor documentation](https://esphome.io/components/sensor/adc/)
-- [Infineon IRLML6401 product data](https://www.infineon.com/part/IRLML6401GPBF)
+- [onsemi BC327 / BC327-40 datasheet](https://www.onsemi.com/pdf/datasheet/bc327-d.pdf)
