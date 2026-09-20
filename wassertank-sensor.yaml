@@ -92,11 +92,42 @@ substitutions:
 # FIRMWARE SELF-UPDATE (HTTP OTA)
 # ============================================================================
 # Current firmware version - MUST be bumped on every release
-  FIRMWARE_VERSION: "1.0.0"
+  FIRMWARE_VERSION: "2.1.0"
 
 # Manifest URL (JSON: {"name": "...", "version": "...", "url": "<firmware.bin>"})
 # Example hosting in Home Assistant: copy manifest.json + .bin to /config/www/wassertank-sensor/
   UPDATE_MANIFEST_URL: "http://homeassistant.local:8123/local/wassertank-sensor/manifest.json"
+
+# ============================================================================
+# GLOBAL FUNCTIONS
+# ============================================================================
+globals:
+  - id: calculate_sleep_duration
+    type: "std::function<void()>"
+    restore_value: no
+    initial_value: |-
+      []() {
+        uint32_t sleep_ms = ${DEFAULT_SLEEP_MINUTES} * 60 * 1000;
+        
+        // Override with Home Assistant input if available
+        if (id(ha_sleep_duration).has_state() && !std::isnan(id(ha_sleep_duration).state) && id(ha_sleep_duration).state > 0) {
+          sleep_ms = (uint32_t) (id(ha_sleep_duration).state * 60 * 1000);
+        }
+        
+        // Adaptive sleep: shorter intervals when solar is available
+        if (id(solar_voltage).has_state() && id(solar_voltage).state > 5.0) {
+          sleep_ms = std::min(sleep_ms, (uint32_t)15 * 60 * 1000);
+          ESP_LOGI("sleep", "Solar power detected - using shorter sleep interval");
+        }
+        
+        // Low battery - extend sleep duration
+        if (id(battery_voltage).has_state() && id(battery_voltage).state < ${BATTERY_CRITICAL_VOLTAGE} + 0.2) {
+          sleep_ms = std::max(sleep_ms, (uint32_t)60 * 60 * 1000);
+          ESP_LOGI("sleep", "Low battery - extending sleep duration");
+        }
+        
+        id(deep_sleep_control).set_sleep_duration(sleep_ms);
+      }
 
 # ============================================================================
 # ESPHOME CONFIGURATION
@@ -115,6 +146,24 @@ esphome:
     then:
       # 1. Turn on sensor power
       - switch.turn_on: sensor_power
+      
+      # 1a. Validate tank configuration
+      - lambda: |-
+          std::string tank_type = "${TANK_TYPE}";
+          if (tank_type == "ROUND") {
+            float radius = ${TANK_RADIUS};
+            if (radius <= 0.0) {
+              ESP_LOGE("config", "ROUND tank requires TANK_RADIUS > 0 (current: %.2f)", radius);
+            }
+          } else if (tank_type == "RECTANGLE") {
+            float length = ${TANK_LENGTH};
+            float width = ${TANK_WIDTH};
+            if (length <= 0.0 || width <= 0.0) {
+              ESP_LOGE("config", "RECTANGLE tank requires TANK_LENGTH > 0 and TANK_WIDTH > 0 (current: %.2f x %.2f)", length, width);
+            }
+          } else {
+            ESP_LOGE("config", "Unknown TANK_TYPE: %s (must be ROUND or RECTANGLE)", tank_type.c_str());
+          }
       
       # 2. Wait for sensor stabilization (A02YYUW warmup)
       - delay: ${ULTRASONIC_WARMUP_TIME}s
@@ -145,28 +194,8 @@ esphome:
                 sleep_duration: 24h
             - lambda: 'return;'  # Exit on_boot sequence
       
-      # 5. Calculate adaptive sleep duration
-      - lambda: |-
-          uint32_t sleep_ms = ${DEFAULT_SLEEP_MINUTES} * 60 * 1000;
-          
-          // Override with Home Assistant input if available
-          if (id(ha_sleep_duration).has_state() && !std::isnan(id(ha_sleep_duration).state) && id(ha_sleep_duration).state > 0) {
-            sleep_ms = (uint32_t) (id(ha_sleep_duration).state * 60 * 1000);
-          }
-          
-          // Adaptive sleep: shorter intervals when solar is available
-          if (id(solar_voltage).has_state() && id(solar_voltage).state > 5.0) {
-            sleep_ms = std::min(sleep_ms, (uint32_t)15 * 60 * 1000);
-            ESP_LOGI("sleep", "Solar power detected - using shorter sleep interval");
-          }
-          
-          // Low battery - extend sleep duration
-          if (id(battery_voltage).has_state() && id(battery_voltage).state < ${BATTERY_CRITICAL_VOLTAGE} + 0.2) {
-            sleep_ms = std::max(sleep_ms, (uint32_t)60 * 60 * 1000);
-            ESP_LOGI("sleep", "Low battery - extending sleep duration");
-          }
-          
-          id(deep_sleep_control).set_sleep_duration(sleep_ms);
+      # 5. Calculate adaptive sleep duration (using global function)
+      - lambda: 'id(calculate_sleep_duration)();'
       
       # 6. OTA window + automatic self-update
       # Stays awake if: OTA Wake Lock is ON OR solar power with battery >= 50%
@@ -456,24 +485,7 @@ sensor:
             
             // If not in debug mode, prepare deep sleep
             if (std::string("${DEBUG_MODE}") == "NONE") {
-              uint32_t sleep_ms = ${DEFAULT_SLEEP_MINUTES} * 60 * 1000;
-              
-              // Override with Home Assistant input if available
-              if (id(ha_sleep_duration).has_state() && !std::isnan(id(ha_sleep_duration).state) && id(ha_sleep_duration).state > 0) {
-                sleep_ms = (uint32_t) (id(ha_sleep_duration).state * 60 * 1000);
-              }
-              
-              // Adaptive sleep based on solar voltage
-              if (id(solar_voltage).has_state() && id(solar_voltage).state > 5.0) {
-                sleep_ms = std::min(sleep_ms, (uint32_t)15 * 60 * 1000);  // Max 15 minutes
-              }
-              
-              // Low battery - extend sleep duration
-              if (id(battery_voltage).has_state() && id(battery_voltage).state < ${BATTERY_CRITICAL_VOLTAGE} + 0.2) {
-                sleep_ms = std::max(sleep_ms, (uint32_t)60 * 60 * 1000);  // Min 1 hour
-              }
-              
-              id(deep_sleep_control).set_sleep_duration(sleep_ms);
+              id(calculate_sleep_duration)();
               id(deep_sleep_control).setup();
             }
 

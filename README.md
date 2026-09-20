@@ -222,7 +222,7 @@ substitutions:
   OTA_WAKE_WINDOW: "300"       # Seconds to stay awake for OTA (5 min)
   
   # ===== FIRMWARE SELF-UPDATE (HTTP OTA) =====
-  FIRMWARE_VERSION: "1.0.0"    # MUST be bumped on every release
+  FIRMWARE_VERSION: "2.1.0"    # MUST be bumped on every release
   UPDATE_MANIFEST_URL: "http://homeassistant.local:8123/local/wassertank-sensor/manifest.json"
 ```
 
@@ -340,7 +340,7 @@ Copy files to `/config/www/wassertank-sensor/` (accessible via HA web server und
 
 ```json
 // /config/www/wassertank-sensor/manifest.json
-{"name": "Wassertank Sensor", "version": "1.0.1",
+{"name": "Wassertank Sensor", "version": "2.1.0",
  "url": "http://homeassistant.local:8123/local/wassertank-sensor/wassertank-sensor.bin"}
 ```
 
@@ -376,7 +376,7 @@ The Update entity (`update.wassertank_firmware`) shows "Update available" whenev
 ```yaml
 substitutions:
   OTA_WAKE_WINDOW: "300"       # Wake window in seconds (default: 300 = 5 min)
-  FIRMWARE_VERSION: "1.0.0"    # Must match/track your releases
+  FIRMWARE_VERSION: "2.1.0"    # Must match/track your releases
   UPDATE_MANIFEST_URL: "http://homeassistant.local:8123/local/wassertank-sensor/manifest.json"
 ```
 
